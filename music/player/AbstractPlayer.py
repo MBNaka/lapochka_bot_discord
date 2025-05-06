@@ -1,5 +1,6 @@
 import abc
 
+
 class AbstractPlayer(abc.ABC):
     @abc.abstractmethod
     async def play(self, track):
@@ -27,11 +28,11 @@ class AbstractPlayer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def volume(self, volume: int):
+    async def set_volume(self, volume: int):
         """Устанавливает громкость."""
         pass
 
     @abc.abstractmethod
-    def queue(self):
+    def get_queue(self):
         """Возвращает текущую очередь треков."""
         pass
