@@ -56,6 +56,12 @@ async def play(interaction: discord.Interaction, query: str):
             f"Playlist added to queue: {tracks.name} ({len(tracks.tracks)} tracks)"
         )
         first_track = tracks.tracks[0]
+        embed = await connect_embed.get_embed(
+            tracks.name,
+            tracks.author,
+            tracks.name,
+            first_track.source,
+        )
         playlist_info = (
             f"Добавлен плейлист: **{tracks.name}** ({len(tracks.tracks)} треков)"
         )
@@ -65,18 +71,18 @@ async def play(interaction: discord.Interaction, query: str):
             f"Track added to queue: {tracks[0].title}. Queue size: {len(player.queue)}"
         )
         first_track = tracks[0]
+        embed = await connect_embed.get_embed(
+            first_track.title,
+            first_track.author,
+            first_track.album.name,
+            first_track.source,
+        )
         playlist_info = f"Добавлен трек: **{tracks[0].title}**"
 
     if not player.playing:
         await player.play(player.queue.get(), volume=30)
         logger.debug(f"{interaction.user.name} started playing {first_track.title}")
 
-    embed = await connect_embed.get_embed(
-        first_track.title,
-        first_track.author,
-        first_track.album.name,
-        first_track.source,
-    )
     embed.description = playlist_info
     await interaction.followup.send(embed=embed, ephemeral=True)
     logger.info(f"{interaction.user.name} success added {first_track.title}")

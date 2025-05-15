@@ -1,4 +1,7 @@
 from utils.settings import get_guild_setting
+from embeds import member_join
+
+import json
 
 ADMIN_MESSAGES = {
     "no_permission": "❌ У вас нет прав для выполнения этой команды.",
@@ -45,3 +48,11 @@ async def get_guild_join_message(guild_id: int, username: str) -> str:
         guild_id, "GUILD_JOIN", "Привет, я Lapochka Bot!"
     )
     return template.format(username=username)
+
+async def get_welcome_embed(guild_id: int, user_id: int, channel_id: int) -> str:
+    data = await get_guild_setting(
+        guild_id, "WELCOME_EMBED", None
+    )
+    embed = await member_join.get_embed(data, user_id, channel_id)
+    return embed
+

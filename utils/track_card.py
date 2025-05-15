@@ -25,14 +25,15 @@ async def download_image(url: str) -> Optional[BytesIO]:
     }
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, timeout=30) as response:
-                if response.status == 200:
-                    data = await response.read()
-                    return BytesIO(data)
-                else:
-                    logger.error(f"Failed to download image. Status: {response.status}")
-                    return None
+        if aiohttp_session is None:
+            await init_aiohttp_session()
+        async with aiohttp_session.get(url, headers=headers, timeout=30) as response:
+            if response.status == 200:
+                data = await response.read()
+                return BytesIO(data)
+            else:
+                logger.error(f"Failed to download image. Status: {response.status}")
+                return None
     except Exception as e:
         logger.error(f"Error downloading image: {str(e)}")
         return None

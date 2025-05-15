@@ -31,9 +31,8 @@ async def on_wavelink_track_end(payload: wavelink.TrackEndEventPayload) -> None:
                 except Exception as e:
                     logger.warning(f"Could not delete last track message: {e}")
 
-            # Отправляем сообщение о пустой очереди и отключаемся
+            # Отправляем сообщение о пустой очереди
             await player.channel.send(embed=await queue_empty_embed.get_embed())
-            await player.disconnect()
             logger.info("Player disconnected after queue end.")
         except Exception as e:
             logger.error(f"Error during empty queue handling: {e}")

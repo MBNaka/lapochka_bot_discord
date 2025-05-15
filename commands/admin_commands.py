@@ -186,7 +186,7 @@ class WelcomeMessageModal(Modal, title="Редактирование приве�
     message = TextInput(
         label="Текст приветствия",
         style=discord.TextStyle.paragraph,
-        placeholder="Введите текст приветствия. Используйте {member} для упоминания участника и {guild} для названия сервера",
+        placeholder="Введите текст приветствия. Используйте {member} и {guild}",
         required=True,
         max_length=2000,
     )

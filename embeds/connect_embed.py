@@ -1,6 +1,6 @@
 import discord
 
-async def get_embed(title, author, album_name, source):
+async def get_embed(title, author, album_name, source) -> discord.Embed:
     embed: discord.Embed=discord.Embed(title=f"{title} by `{author}`")
     embed.colour = discord.Colour.purple()
     description = f"**Трек добавлен в очередь**"

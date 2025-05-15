@@ -64,6 +64,7 @@ LAVALINK_HOST = os.getenv("LAVALINK_HOST")
 LAVALINK_PASSWORD = os.getenv("LAVALINK_PASSWORD")
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 aiohttp_session = None
@@ -71,6 +72,7 @@ aiohttp_session = None
 EXTENSIONS = [
     "commands.birthday_commands",
     "commands.admin_commands",
+    "commands.setup_commands",
     "tasks.birthday_task",
 ]
 

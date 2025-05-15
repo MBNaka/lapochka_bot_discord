@@ -5,9 +5,30 @@
       "BIRTHDAY_CHANNEL_ID": 1266753582984593529,
       "GREETINGS_CHANNEL_ID": 1266753582984593529,
       "BIRTHDAY_ROLE_ID": 927567592737095722,
-      "WELCOME_ENABLED": false,
+      "RULES_CHANNEL_ID": 981320862047285278,
+      "WELCOME_ENABLED": true,
+      "WELCOME_CHANNEL_ID": 959687811966062632,
+      "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
+      "WELCOME_EMBED": {
+        "TEXT": ":flag_ru: Alatulya, <@{username}>! Рады приветствовать тебя на нашем сервере!\nПожалуйста, ознакомься с правилами сообщества: <#{channel}>\n\n:anusauk: Alatulya, <@456790730715955200>! We're glad to have you on the our server!\nPlease, familiarize yourself with the server rules: <#{channel}>",
+        "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
+        "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
+      }
+    },
+    "1018507850223456286": {
+      "GUILD_JOIN": "Привет, я твой Lapochka! Круто, что я оказался на сервере {username}. Теперь тебе нужно настроить меня, введи команду /setup, чтобы я смог помочь тебе ознакомиться с моими функциями",
+      "BIRTHDAY_CHANNEL_ID": null,
+      "GREETINGS_CHANNEL_ID": null,
+      "BIRTHDAY_ROLE_ID": null,
+      "RULES_CHANNEL_ID": null,
+      "WELCOME_ENABLED": true,
       "WELCOME_CHANNEL_ID": null,
-      "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!"
+      "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
+      "WELCOME_EMBED": {
+        "TEXT": "hello, world!",
+        "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
+        "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
+      }
     }
   }
 }
