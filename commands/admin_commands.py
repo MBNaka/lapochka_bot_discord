@@ -182,6 +182,19 @@ from utils.messages import MESSAGES
 from utils.settings import get_guild_setting, set_guild_setting
 
 
+async def isChannelEmpty (guild_id: int):
+    """Function to check if a welcome channel ID is empty or not.
+
+    Args:
+        guild_id (int): ID of the guild
+
+    Returns:
+        bool: True if channel is empty, False otherwise
+    """
+    if await get_guild_setting(guild_id, "WELCOME_CHANNEL_ID") is None:
+        return True
+    return False
+
 class WelcomeMessageModal(Modal, title="Редактирование приветствия"):
     message = TextInput(
         label="Текст приветствия",
@@ -226,6 +239,12 @@ async def welcome_settings(
 
     match action:
         case "enable":
+            channel_id = await get_guild_setting(interaction.guild_id, "WELCOME_CHANNEL_ID")
+            if await isChannelEmpty(interaction.guild_id) is True:
+                await interaction.response.send_message(
+                    "❌ Укажите канал для приветствий!", ephemeral=True
+                )
+                return
             await set_guild_setting(interaction.guild_id, "WELCOME_ENABLED", True)
             await interaction.response.send_message(
                 "✅ Приветственные сообщения включены!", ephemeral=True
