@@ -8,6 +8,7 @@
       "RULES_CHANNEL_ID": 981320862047285278,
       "WELCOME_ENABLED": true,
       "WELCOME_CHANNEL_ID": 959687811966062632,
+      "WELCOME_EMBED_MESSAGE_ID": 1374926336887488603, // На когда-нибудь
       "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
       "WELCOME_EMBED": {
         "TEXT": ":flag_ru: Alatulya, <@{username}>! Рады приветствовать тебя на нашем сервере!\nПожалуйста, ознакомься с правилами сообщества: <#{channel}>\n\n:anusauk: Alatulya, <@456790730715955200>! We're glad to have you on the our server!\nPlease, familiarize yourself with the server rules: <#{channel}>",
@@ -23,6 +24,7 @@
       "RULES_CHANNEL_ID": null,
       "WELCOME_ENABLED": true,
       "WELCOME_CHANNEL_ID": null,
+      "WELCOME_EMBED_MESSAGE_ID": null,
       "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
       "WELCOME_EMBED": {
         "TEXT": "hello, world!",

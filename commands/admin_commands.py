@@ -1,10 +1,15 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ui import Modal, TextInput
+
 
 from database import database
-from loader import logger
-from utils.messages import ADMIN_MESSAGES
+from database.database import is_admin
+from loader import bot, logger
+from utils.messages import ADMIN_MESSAGES, MESSAGES
+from utils.settings import get_guild_setting, set_guild_setting
+
 
 
 class AdminCommands(commands.Cog):
@@ -172,16 +177,6 @@ async def setup(bot):
     await bot.add_cog(AdminCommands(bot))
 
 
-import discord
-from discord import app_commands
-from discord.ui import Modal, TextInput
-
-from database.database import is_admin
-from loader import bot, logger
-from utils.messages import MESSAGES
-from utils.settings import get_guild_setting, set_guild_setting
-
-
 async def isChannelEmpty (guild_id: int):
     """Function to check if a welcome channel ID is empty or not.
 
@@ -279,3 +274,52 @@ async def welcome_settings(
                 f"✅ Канал для приветствий установлен: {channel.mention}",
                 ephemeral=True,
             )
+
+class WelcomeSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="О сервере", value="about", description="Информация о сервере"),
+            discord.SelectOption(label="Как получить роль", value="roles", description="Инструкция по ролям"),
+            discord.SelectOption(label="Связаться с модератором", value="contact", description="Как связаться с модератором"),
+        ]
+        super().__init__(placeholder="Выберите интересующий пункт...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        responses = {
+            "about": "Это сервер для общения и веселья! Здесь ты найдёшь новых друзей и интересные активности.",
+            "roles": "Чтобы получить роль, перейди в канал #roles и выбери подходящую роль с помощью реакций или кнопок.",
+            "contact": "Связаться с модератором можно через личные сообщения или в канале #support.",
+        }
+        await interaction.response.send_message(responses[self.values[0]], ephemeral=True)
+
+class WelcomeView(discord.ui.View):
+    def __init__(self, faq_url, roles_url, rules_url):
+        super().__init__(timeout=None)
+        self.add_item(WelcomeSelect())
+        self.add_item(discord.ui.Button(label="FAQ", url=faq_url, style=discord.ButtonStyle.link))
+        self.add_item(discord.ui.Button(label="Роли", url=roles_url, style=discord.ButtonStyle.link))
+        self.add_item(discord.ui.Button(label="Правила", url=rules_url, style=discord.ButtonStyle.link))
+
+@bot.tree.command(name="send_welcome_embed", description="Отправить приветственное embed-сообщение с меню и кнопками (однократно)")
+@app_commands.describe(
+    channel="Канал для приветственного сообщения"
+)
+async def send_welcome_embed(interaction: discord.Interaction, channel: discord.TextChannel):
+    guild_id = str(interaction.guild.id)
+    if not database.is_admin(guild_id, str(interaction.user.id)):
+        await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        return
+    message_id = await get_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID")
+    if message_id:
+        await interaction.response.send_message("❌ Приветственное сообщение уже отправлено.", ephemeral=True)
+        return
+    # Настроить ссылки на FAQ, роли, правила (заменить на реальные URL или получить из настроек)
+    faq_url = f"https://discord.com/channels/{guild_id}/1216022567744311316"
+    roles_url = f"https://discord.com/channels/{guild_id}/1198002842502434996"
+    rules_url = f"https://discord.com/channels/{guild_id}/981320862047285278"
+    welcome_text = "WIP"
+    embed = discord.Embed(title="Добро пожаловать!", description=welcome_text, color=discord.Color.purple())
+    view = WelcomeView(faq_url, roles_url, rules_url)
+    sent_message = await channel.send(embed=embed, view=view)
+    await set_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID", sent_message.id)
+    await interaction.response.send_message(f"✅ Приветственное сообщение отправлено в {channel.mention}!", ephemeral=True)
