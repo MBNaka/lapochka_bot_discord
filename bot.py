@@ -1,21 +1,20 @@
-import commands.music_commands
-import events.on_guild_join
-import events.on_member_join
-import events.on_ready
-import events.on_wavelink_inactive_player
-import events.on_wavelink_track_end
-import events.on_wavelink_track_start
+import asyncio
 from database import database
 from lavalink import run_lavalink
 from loader import TOKEN, bot, logger
 
-# logger.info("Starting lavalink server...")
-# run_lavalink()
-# logger.info("Lavalink server started.")
-
 database.init_db()
 
+async def main():
+    logger.info("Loading extensions...")
+    await bot.load_extension("commands.music_commands")
+    await bot.load_extension("commands.admin_commands")
+    await bot.load_extension("commands.birthday_commands")
+    await bot.load_extension("commands.setup_commands")
+    await bot.load_extension("events.events_cog")
+    logger.info("Extensions loaded. Starting bot...")
+    await bot.start(TOKEN)
+    logger.info("Bot stopped.")
+
 if __name__ == "__main__":
-    logger.info("Run")
-    bot.run(TOKEN)
-    logger.info("Stop")
+    asyncio.run(main())

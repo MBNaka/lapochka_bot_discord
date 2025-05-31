@@ -1,11 +1,10 @@
 import re
-
 import discord
 from discord import Interaction, app_commands
 from discord.ext import commands
 
 from database import database
-from loader import bot, logger
+from loader import logger
 
 
 class BirthdayModal(discord.ui.Modal, title="Регистрация дня рождения"):

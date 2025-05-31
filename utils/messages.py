@@ -1,29 +1,30 @@
+"""
+messages.py — централизованное хранилище всех текстовых сообщений и шаблонов для Lapochka Bot.
+Содержит сообщения для команд, ошибок, подсказок, а также функции для генерации embed-ов и приветствий.
+"""
+
 from utils.settings import get_guild_setting
 from embeds import member_join
 
-import json
-
-ADMIN_MESSAGES = {
+MESSAGES = {
+    # Админ-команды
     "no_permission": "❌ У вас нет прав для выполнения этой команды.",
     "already_admin": "❌ Этот пользователь уже является администратором.",
     "added_admin": "✅ Пользователь {mention} добавлен в список админов.",
     "removed_admin": "✅ Пользователь {mention} удалён из списка админов.",
-    "no_greeting": "❌ У пользователя нет сохранённого поздравления.",
-    "greeting_updated": "✅ Поздравление успешно обновлено!",
     "admin_list_empty": "Список администраторов пуст.",
     "admin_list": "**Список администраторов:**\n{admin_list}",
-}
-
-WELCOME_MESSAGES = {
+    # Приветствия
     "enabled": "✅ Приветственные сообщения включены!",
     "disabled": "✅ Приветственные сообщения выключены!",
-    "channel_set": "✅ Канал для приветствий установлен: {}",
+    "channel_set": "✅ Канал для приветствий установлен: {0}",
     "message_updated": "✅ Текст приветствия обновлен!",
     "no_channel": "❌ Укажите канал!",
-    "no_permission": "❌ У вас нет прав на использование этой команды!",
-}
-
-MESSAGES = {
+    "welcome_placeholder": "Введите текст приветствия. Используйте {member} и {guild}",
+    "default_welcome_message": "Привет, {member}! Добро пожаловать на сервер {guild}!",
+    "already_sent": "❌ Приветствие уже было отправлено этому участнику.",
+    "welcome_sent": "✅ Приветствие отправлено!",
+    # Музыкальные команды
     "not_in_voice": "Пожалуйста, подключись к каналу, прежде чем звать меня 😽",
     "connect_error": "Не удалось подключиться к голосовому каналу 😿",
     "track_not_found": "Я попытался поискать твой трек, но так ничего и не нашёл 😿",
@@ -35,21 +36,41 @@ MESSAGES = {
     "resumed": "Возобновил трек",
     "volume_set": "Установил уровень громкости на {value}%",
     "volume_invalid": "Уровень громкости должен быть 25, 50, 75 или 100",
-    **WELCOME_MESSAGES,
+    # Birthday-команды
+    "no_greeting": "❌ У пользователя нет сохранённого поздравления.",
+    "greeting_updated": "✅ Поздравление успешно обновлено!",
+    "birthday_set": "✅ День рождения пользователя {mention} установлен на {date}.",
+    "birthday_removed": "✅ День рождения пользователя {mention} удалён.",
+    "birthday_not_found": "❌ День рождения пользователя не найден.",
+    "birthday_list_empty": "Список дней рождений пуст.",
+    # Setup-команды
+    "setup_complete": "✅ Настройка завершена!",
+    "setup_already": "Настройка уже была выполнена ранее.",
+    # Общие
+    "error": "Произошла ошибка. Попробуйте ещё раз позже.",
 }
 
-TITLES = {}
+TITLES = {
+    # Пример: "music": "Музыкальный плеер Lapochka"
+}
 
-DESCRIPTIONS = {}
-
+DESCRIPTIONS = {
+    # Пример: "music": "Управляй музыкой прямо в Discord!"
+}
 
 async def get_guild_join_message(guild_id: int, username: str) -> str:
+    """
+    Получить приветственное сообщение для нового участника сервера.
+    """
     template = await get_guild_setting(
         guild_id, "GUILD_JOIN", "Привет, я Lapochka Bot!"
     )
     return template.format(username=username)
 
-async def get_welcome_embed(guild_id: int, user_id: int, channel_id: int) -> str:
+async def get_welcome_embed(guild_id: int, user_id: int, channel_id: int):
+    """
+    Получить embed для приветствия нового участника.
+    """
     data = await get_guild_setting(
         guild_id, "WELCOME_EMBED", None
     )
