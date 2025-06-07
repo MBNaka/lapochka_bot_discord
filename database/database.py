@@ -77,6 +77,20 @@ def init_db():
             FOREIGN KEY(guild_id, user_id) REFERENCES users(guild_id, user_id) ON DELETE CASCADE
         )"""
         )
+        # Таблица запланированных сообщений
+        c.execute(
+            '''CREATE TABLE IF NOT EXISTS scheduled_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                repeat TEXT NOT NULL, -- never, day, week, month, year
+                datetime TEXT NOT NULL, -- ISO формат
+                channel_id TEXT NOT NULL,
+                message TEXT NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'''
+        )
         conn.commit()
 
 
@@ -216,4 +230,35 @@ def remove_birthday_role(guild_id: str, user_id: str):
             "DELETE FROM birthday_role_assignments WHERE guild_id = ? AND user_id = ?",
             (guild_id, user_id),
         )
+        conn.commit()
+
+
+def add_scheduled_message(guild_id, repeat, datetime_str, channel_id, message, enabled=1):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute('''INSERT INTO scheduled_messages (guild_id, repeat, datetime, channel_id, message, enabled) VALUES (?, ?, ?, ?, ?, ?)''',
+                  (guild_id, repeat, datetime_str, channel_id, message, enabled))
+        conn.commit()
+        return c.lastrowid
+
+
+def get_scheduled_messages(guild_id):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute('''SELECT id, repeat, datetime, channel_id, message, enabled FROM scheduled_messages WHERE guild_id = ? ORDER BY datetime(datetime)''', (guild_id,))
+        return c.fetchall()
+
+
+def remove_scheduled_message(guild_id, msg_id):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute('''DELETE FROM scheduled_messages WHERE guild_id = ? AND id = ?''', (guild_id, msg_id))
+        conn.commit()
+
+
+def update_scheduled_message(guild_id, msg_id, repeat, datetime_str, channel_id, message, enabled=1):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute('''UPDATE scheduled_messages SET repeat=?, datetime=?, channel_id=?, message=?, enabled=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=? AND id=?''',
+                  (repeat, datetime_str, channel_id, message, enabled, guild_id, msg_id))
         conn.commit()
