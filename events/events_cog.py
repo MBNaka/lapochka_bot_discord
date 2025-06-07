@@ -11,17 +11,13 @@ class Events(commands.Cog):
     """Cog для всех Discord событий: on_ready, on_guild_join, on_member_join, события Wavelink и др."""
     def __init__(self, bot):
         self.bot = bot
+        logger.info("Events Cog инициализирован")
 
     @commands.Cog.listener()
     async def on_ready(self):
+        logger.info("Events Cog: on_ready вызван")
         """Инициализация бота, подключение к Lavalink, синхронизация команд."""
         discord.utils.setup_logging(level=logger.level)
-        for extention in EXTENSIONS:
-            try:
-                await self.bot.load_extension(extention)
-                logger.info(f"Extension {extention} loaded successfully.")
-            except Exception as e:
-                logger.error(f"Failed to load extension {extention}: {e}")
         await init_aiohttp_session()
         logger.info("Logged in: %s | %s", self.bot.user, self.bot.user.id)
         selected_node = {"host": LAVALINK_HOST, "password": LAVALINK_PASSWORD}
@@ -44,7 +40,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         """Обработка события присоединения к новому серверу."""
-        logger.info(f"Joined guild: {guild.name} (ID: {guild.id})")
         from database import database
         database.register_guild(str(guild.id))
         if database.is_admin(str(guild.id), str(guild.owner_id)) is False:
@@ -53,26 +48,36 @@ class Events(commands.Cog):
         else:
             logger.info(f"Owner guild: {guild.name} (ID:{guild.id}) is already admin")
         settings = await load_settings()
-        new_guild_settings = {
-            "GUILD_JOIN": "Привет, я твой Lapochka! Круто, что я оказался на сервере {username}. Теперь тебе нужно настроить меня, введи команду /setup, чтобы я смог помочь тебе ознакомиться с моими функциями",
-            "BIRTHDAY_CHANNEL_ID": None,
-            "GREETINGS_CHANNEL_ID": None,
-            "BIRTHDAY_ROLE_ID": None,
-            "RULES_CHANNEL_ID": None,
-            "WELCOME_ENABLED": True,
-            "WELCOME_CHANNEL_ID": None,
-            "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
-            "WELCOME_EMBED": {
+        # --- Сохраняем/обновляем инфу о сервере ---
+        guilds = settings.setdefault("guilds", {})
+        gentry = guilds.setdefault(str(guild.id), {})
+        gentry["id"] = str(guild.id)
+        gentry["name"] = guild.name
+        gentry["icon_url"] = guild.icon.url if guild.icon else None
+        # --- Остальные настройки ---
+        gentry.update({
+            "BIRTHDAY_CHANNEL_ID": gentry.get("BIRTHDAY_CHANNEL_ID"),
+            "GREETINGS_CHANNEL_ID": gentry.get("GREETINGS_CHANNEL_ID"),
+            "BIRTHDAY_ROLE_ID": gentry.get("BIRTHDAY_ROLE_ID"),
+            "RULES_CHANNEL_ID": gentry.get("RULES_CHANNEL_ID"),
+            "WELCOME_ENABLED": gentry.get("WELCOME_ENABLED", True),
+            "WELCOME_CHANNEL_ID": gentry.get("WELCOME_CHANNEL_ID"),
+            "WELCOME_MESSAGE": gentry.get("WELCOME_MESSAGE", "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!"),
+            "WELCOME_EMBED": gentry.get("WELCOME_EMBED", {
                 "TEXT": ":flag_ru: Alatulya, <@{username}>! Рады приветствовать тебя на нашем сервере!\nПожалуйста, ознакомься с правилами сообщества: <#{channel}>\n\n:anusauk: Alatulya, <@456790730715955200>! We're glad to have you on the our server!\nPlease, familiarize yourself with the server rules: <#{channel}>",
                 "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
                 "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
-            }
-        }
-        settings["guilds"][str(guild.id)] = new_guild_settings
+            }),
+            "PANEL_PASSWORD": gentry.get("PANEL_PASSWORD", None)
+        })
+        settings["guilds"][str(guild.id)] = gentry
         await save_settings(settings)
         channel = guild.system_channel
         if channel is not None:
-            await channel.send(embed=await guild_join.get_embed(guild))
+            embed = await guild_join.get_embed(guild.owner.name)
+            await channel.send(embed=embed)
+        else:
+            logger.warning(f"system_channel is None for guild: {guild.name}")
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

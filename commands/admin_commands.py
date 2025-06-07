@@ -6,7 +6,7 @@ from discord.ui import Modal, TextInput
 from database import database
 from database.database import is_admin
 from loader import logger
-from utils.messages import ADMIN_MESSAGES, MESSAGES
+from utils.messages import MESSAGES
 from utils.settings import get_guild_setting, set_guild_setting
 from utils.decorators import admin_only
 
@@ -23,7 +23,7 @@ class AdminCommands(commands.Cog):
         guild_id = str(interaction.guild.id)
         if database.is_admin(guild_id, str(user.id)):
             await interaction.response.send_message(
-                ADMIN_MESSAGES["already_admin"], ephemeral=True
+                MESSAGES["already_admin"], ephemeral=True
             )
             return
         database.add_admin(guild_id, str(user.id))
@@ -31,7 +31,7 @@ class AdminCommands(commands.Cog):
             f"User {interaction.user} added {user} as admin in guild {guild_id}."
         )
         await interaction.response.send_message(
-            ADMIN_MESSAGES["added_admin"].format(mention=user.mention), ephemeral=True
+            MESSAGES["added_admin"].format(mention=user.mention), ephemeral=True
         )
 
     @admin_only()
@@ -48,7 +48,7 @@ class AdminCommands(commands.Cog):
             f"User {interaction.user} removed {user} from admin list in guild {guild_id}."
         )
         await interaction.response.send_message(
-            ADMIN_MESSAGES["removed_admin"].format(mention=user.mention), ephemeral=True
+            MESSAGES["removed_admin"].format(mention=user.mention), ephemeral=True
         )
 
     @admin_only()
@@ -66,7 +66,7 @@ class AdminCommands(commands.Cog):
                 f"User {interaction.user} tried to edit greeting for {user}, but no greeting found in guild {guild_id}."
             )
             await interaction.response.send_message(
-                ADMIN_MESSAGES["no_greeting"], ephemeral=True
+                MESSAGES["no_greeting"], ephemeral=True
             )
             return
 
@@ -108,7 +108,7 @@ class AdminCommands(commands.Cog):
                     f"User {interaction.user} updated greeting for {user} in guild {guild_id}."
                 )
                 await interaction.response.send_message(
-                    ADMIN_MESSAGES["greeting_updated"], ephemeral=True
+                    MESSAGES["greeting_updated"], ephemeral=True
                 )
 
         await interaction.response.send_modal(EditGreetingModal())
@@ -127,7 +127,7 @@ class AdminCommands(commands.Cog):
         if not rows:
             logger.info(f"Admin list is empty for guild {guild_id}.")
             await interaction.response.send_message(
-                ADMIN_MESSAGES["admin_list_empty"], ephemeral=True
+                MESSAGES["admin_list_empty"], ephemeral=True
             )
             return
 
@@ -137,7 +137,7 @@ class AdminCommands(commands.Cog):
             f"User {interaction.user} requested admin list: {admin_list} in guild {guild_id}"
         )
         await interaction.response.send_message(
-            ADMIN_MESSAGES["admin_list"].format(admin_list=admin_list), ephemeral=True
+            MESSAGES["admin_list"].format(admin_list=admin_list), ephemeral=True
         )
 
     @admin_only()
@@ -168,29 +168,29 @@ class AdminCommands(commands.Cog):
                 channel_id = await get_guild_setting(interaction.guild_id, "WELCOME_CHANNEL_ID")
                 if await isChannelEmpty(interaction.guild_id) is True:
                     await interaction.response.send_message(
-                        ADMIN_MESSAGES["no_channel"], ephemeral=True
+                        MESSAGES["no_channel"], ephemeral=True
                     )
                     return
                 await set_guild_setting(interaction.guild_id, "WELCOME_ENABLED", True)
                 await interaction.response.send_message(
-                    ADMIN_MESSAGES["enabled"], ephemeral=True
+                    MESSAGES["enabled"], ephemeral=True
                 )
             case "disable":
                 await set_guild_setting(interaction.guild_id, "WELCOME_ENABLED", False)
                 await interaction.response.send_message(
-                    ADMIN_MESSAGES["disabled"], ephemeral=True
+                    MESSAGES["disabled"], ephemeral=True
                 )
             case "edit":
                 current_message = await get_guild_setting(
                     interaction.guild_id,
                     "WELCOME_MESSAGE",
-                    ADMIN_MESSAGES["default_welcome_message"] if "default_welcome_message" in ADMIN_MESSAGES else "Привет, {member}! Добро пожаловать на сервер {guild}!",
+                    MESSAGES["default_welcome_message"] if "default_welcome_message" in MESSAGES else "Привет, {member}! Добро пожаловать на сервер {guild}!",
                 )
                 class WelcomeMessageModal(Modal, title="Редактирование приветствия"):
                     message = TextInput(
                         label="Текст приветствия",
                         style=discord.TextStyle.paragraph,
-                        placeholder=ADMIN_MESSAGES["welcome_placeholder"] if "welcome_placeholder" in ADMIN_MESSAGES else "Введите текст приветствия. Используйте {member} и {guild}",
+                        placeholder=MESSAGES["welcome_placeholder"] if "welcome_placeholder" in MESSAGES else "Введите текст приветствия. Используйте {member} и {guild}",
                         required=True,
                         max_length=2000,
                         default=current_message
@@ -200,20 +200,20 @@ class AdminCommands(commands.Cog):
                             interaction.guild_id, "WELCOME_MESSAGE", self.message.value
                         )
                         await interaction.response.send_message(
-                            ADMIN_MESSAGES["message_updated"], ephemeral=True
+                            MESSAGES["message_updated"], ephemeral=True
                         )
                 await interaction.response.send_modal(WelcomeMessageModal())
             case "channel":
                 if not channel:
                     await interaction.response.send_message(
-                        ADMIN_MESSAGES["no_channel"], ephemeral=True
+                        MESSAGES["no_channel"], ephemeral=True
                     )
                     return
                 await set_guild_setting(
                     interaction.guild_id, "WELCOME_CHANNEL_ID", channel.id
                 )
                 await interaction.response.send_message(
-                    ADMIN_MESSAGES["channel_set"].format(channel.mention),
+                    MESSAGES["channel_set"].format(channel.mention),
                     ephemeral=True,
                 )
 
@@ -251,7 +251,7 @@ class AdminCommands(commands.Cog):
         guild_id = str(interaction.guild.id)
         message_id = await get_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID")
         if message_id:
-            await interaction.response.send_message(ADMIN_MESSAGES["already_sent"], ephemeral=True)
+            await interaction.response.send_message(MESSAGES["already_sent"], ephemeral=True)
             return
         # Настроить ссылки на FAQ, роли, правила (заменить на реальные URL или получить из настроек)
         faq_url = f"https://discord.com/channels/{guild_id}/1216022567744311316"
@@ -262,7 +262,19 @@ class AdminCommands(commands.Cog):
         view = AdminCommands.WelcomeView(faq_url, roles_url, rules_url)
         sent_message = await channel.send(embed=embed, view=view)
         await set_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID", sent_message.id)
-        await interaction.response.send_message(ADMIN_MESSAGES["welcome_sent"].format(channel.mention), ephemeral=True)
+        await interaction.response.send_message(MESSAGES["welcome_sent"].format(channel.mention), ephemeral=True)
+
+    @admin_only()
+    @app_commands.command(name="set_panel_password", description="Установить пароль для панели управления (только для владельца сервера)")
+    @app_commands.describe(password="Новый пароль для панели")
+    async def set_panel_password(self, interaction: discord.Interaction, password: str):
+        # Проверка: только владелец сервера
+        if interaction.user.id != interaction.guild.owner_id:
+            await interaction.response.send_message("❌ Только владелец сервера может использовать эту команду.", ephemeral=True)
+            return
+        from utils.settings import set_guild_setting
+        await set_guild_setting(interaction.guild.id, "PANEL_PASSWORD", password)
+        await interaction.response.send_message("✅ PANEL_PASSWORD успешно установлен для панели управления!", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(AdminCommands(bot))

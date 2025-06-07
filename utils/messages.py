@@ -3,7 +3,7 @@ messages.py — централизованное хранилище всех т�
 Содержит сообщения для команд, ошибок, подсказок, а также функции для генерации embed-ов и приветствий.
 """
 
-from utils.settings import get_guild_setting
+from utils.settings import get_guild_setting, get_main_setting
 from embeds import member_join
 
 MESSAGES = {
@@ -58,12 +58,12 @@ DESCRIPTIONS = {
     # Пример: "music": "Управляй музыкой прямо в Discord!"
 }
 
-async def get_guild_join_message(guild_id: int, username: str) -> str:
+async def get_guild_join_message(username: str) -> str:
     """
     Получить приветственное сообщение для нового участника сервера.
     """
-    template = await get_guild_setting(
-        guild_id, "GUILD_JOIN", "Привет, я Lapochka Bot!"
+    template = await get_main_setting(
+        "GUILD_JOIN", "Привет, я Lapochka Bot!"
     )
     return template.format(username=username)
 
