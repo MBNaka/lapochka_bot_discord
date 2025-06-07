@@ -339,7 +339,7 @@ def main(page: ft.Page):
         def refresh_logs(e):
             log_text.value = read_logs()
             page.update()
-        refresh_btn = ft.ElevatedButton("Обновить логи", icon=ft.Icons.REFRESH, on_click=refresh_logs, style=ft.ButtonStyle(bgcolor=ft.Colors.DEEP_PURPLE_400))
+        refresh_btn = ft.ElevatedButton("Обновить логи", icon=ft.Icons.REFRESH, on_click=refresh_logs, style=ft.ButtonStyle(bgcolor=ft.Colors.DEEP_PURPLE_400, color=ft.Colors.WHITE))
         logs_tab = ft.Container(
             content=ft.Column([
                 ft.Text("Логи бота", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.DEEP_PURPLE_200),
