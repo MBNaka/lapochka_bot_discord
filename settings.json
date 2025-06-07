@@ -21,7 +21,26 @@
         "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
         "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
       },
-      "PANEL_PASSWORD": "pass1"
+      "PANEL_PASSWORD": "pass1",
+      "ROLE_REPORT_CHANNEL_ID": 1266753582984593529,
+      "ROLE_GROUPS": [
+        {
+          "name": "Админы",
+          "roles": [
+            838347209778003990,
+            1266751477125484545,
+            953253780474957894
+          ],
+          "message_id": 1380875567221440542
+        },
+        {
+          "name": "Боты",
+          "roles": [
+            1335029484872663082
+          ],
+          "message_id": 1380875568173547552
+        }
+      ]
     },
     "1018507850223456286": {
       "name": "nedoрастеры",
@@ -39,7 +58,26 @@
         "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
         "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
       },
-      "PANEL_PASSWORD": "pass2"
+      "PANEL_PASSWORD": null,
+      "ROLE_REPORT_CHANNEL_ID": null,
+      "ROLE_GROUPS": [
+        {
+          "name": "Укажи название группы",
+          "roles": [
+            11111,
+            22222
+          ],
+          "message_id": 0
+        },
+        {
+          "name": "Укажи название группы 2",
+          "roles": [
+            33333,
+            44444
+          ],
+          "message_id": 0
+        }
+      ]
     },
     "1378165871951876158": {
       "name": "test",
@@ -56,11 +94,62 @@
         "THUMBNAIL_URL": "https://c.tenor.com/M6P70GCibuIAAAAd/tenor.gif",
         "IMAGE_URL": "https://c.tenor.com/feuybd69rxcAAAAd/tenor.gif"
       },
-      "PANEL_PASSWORD": "pass3"
+      "PANEL_PASSWORD": null,
+      "ROLE_REPORT_CHANNEL_ID": null,
+      "ROLE_GROUPS": [
+        {
+          "name": "Укажи название группы",
+          "roles": [
+            11111,
+            22222
+          ],
+          "message_id": 0
+        },
+        {
+          "name": "Укажи название группы 2",
+          "roles": [
+            33333,
+            44444
+          ],
+          "message_id": 0
+        }
+      ]
     },
     "696075930497712188": {
       "name": "RSOTM | Caliber",
-      "icon_url": "https://cdn.discordapp.com/icons/696075930497712188/1b6407d00e628c3c09653ede17a69b9c.png?size=1024"
+      "icon_url": "https://cdn.discordapp.com/icons/696075930497712188/1b6407d00e628c3c09653ede17a69b9c.png?size=1024",
+      "BIRTHDAY_CHANNEL_ID": null,
+      "GREETINGS_CHANNEL_ID": null,
+      "BIRTHDAY_ROLE_ID": null,
+      "RULES_CHANNEL_ID": null,
+      "WELCOME_ENABLED": true,
+      "WELCOME_CHANNEL_ID": null,
+      "WELCOME_MESSAGE": "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!",
+      "WELCOME_EMBED": {
+        "TEXT": "Привет! Добро пожаловать на сервер! {username}",
+        "THUMBNAIL_URL": "https://c.tenor.com/M6P70GCibuIAAAAd/tenor.gif",
+        "IMAGE_URL": "https://c.tenor.com/feuybd69rxcAAAAd/tenor.gif"
+      },
+      "PANEL_PASSWORD": null,
+      "ROLE_REPORT_CHANNEL_ID": null,
+      "ROLE_GROUPS": [
+        {
+          "name": "Укажи название группы",
+          "roles": [
+            11111,
+            22222
+          ],
+          "message_id": 0
+        },
+        {
+          "name": "Укажи название группы 2",
+          "roles": [
+            33333,
+            44444
+          ],
+          "message_id": 0
+        }
+      ]
     }
   }
 }

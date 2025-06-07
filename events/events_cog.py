@@ -68,7 +68,9 @@ class Events(commands.Cog):
                 "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
                 "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
             }),
-            "PANEL_PASSWORD": gentry.get("PANEL_PASSWORD", None)
+            "PANEL_PASSWORD": gentry.get("PANEL_PASSWORD", None),
+            "ROLE_REPORT_CHANNEL_ID": gentry.get("ROLE_REPORT_CHANNEL_ID", None),
+            "ROLE_GROUPS": gentry.get("ROLE_GROUPS", [{"name": "Укажи название группы", "roles": [11111, 22222], "message_id": 0}, {"name": "Укажи название группы 2", "roles": [33333, 44444], "message_id": 0}])
         })
         settings["guilds"][str(guild.id)] = gentry
         await save_settings(settings)

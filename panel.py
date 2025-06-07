@@ -219,48 +219,49 @@ def main(page: ft.Page):
             return guilds.get(gid, {})
 
         # --- Управление ботом ---
-        bot_status = ft.Text("Статус: Остановлен", color=ft.Colors.GREY_400)
+        bot_status = ft.Text("Статус: Остановлен", color=ft.Colors.GREY_400, size=36, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
         def update_bot_status():
             global BOT_PROCESS
             if BOT_PROCESS and BOT_PROCESS.poll() is None:
-                bot_status.value = "Статус: Запущен"
+                bot_status.value = "\u25CF Запущен"
                 bot_status.color = ft.Colors.GREEN_400
             else:
-                bot_status.value = "Статус: Остановлен"
-                bot_status.color = ft.Colors.GREY_400
+                bot_status.value = "\u25CF Остановлен"
+                bot_status.color = ft.Colors.RED_400
+        update_bot_status()
 
-        def start_bot_ui(e):
-            start_bot(page)
-            update_bot_status()
-            page.update()
-        def stop_bot_ui(e):
-            stop_bot(page)
-            update_bot_status()
-            page.update()
-
-        start_btn = ft.ElevatedButton(
-            "Запустить бота",
-            icon=ft.Icons.PLAY_ARROW,
-            on_click=start_bot_ui,
-            style=ft.ButtonStyle(
-                bgcolor=ft.Colors.DEEP_PURPLE_400,
-                color=ft.Colors.WHITE  # Белый текст для читаемости
+        if auth_state["is_admin"]:
+            start_btn = ft.ElevatedButton(
+                "Запустить бота",
+                icon=ft.Icons.PLAY_ARROW,
+                on_click=lambda e: [start_bot(page), update_bot_status(), page.update()],
+                style=ft.ButtonStyle(
+                    bgcolor=ft.Colors.DEEP_PURPLE_400,
+                    color=ft.Colors.WHITE
+                )
             )
-        )
-        stop_btn = ft.ElevatedButton(
-            "Остановить бота",
-            icon=ft.Icons.STOP,
-            on_click=stop_bot_ui,
-            style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_700, color=ft.Colors.WHITE)
-        )
-        bot_tab = ft.Container(
-            content=ft.Column([
-                ft.Text("Управление ботом", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.DEEP_PURPLE_200),
-                bot_status,
-                ft.Row([start_btn, stop_btn], alignment=ft.MainAxisAlignment.START),
-            ], spacing=20),
-            padding=30,
-        )
+            stop_btn = ft.ElevatedButton(
+                "Остановить бота",
+                icon=ft.Icons.STOP,
+                on_click=lambda e: [stop_bot(page), update_bot_status(), page.update()],
+                style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_700, color=ft.Colors.WHITE)
+            )
+            bot_tab = ft.Container(
+                content=ft.Column([
+                    ft.Text("Управление ботом", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.DEEP_PURPLE_200),
+                    bot_status,
+                    ft.Row([start_btn, stop_btn], alignment=ft.MainAxisAlignment.CENTER),
+                ], spacing=30, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=40,
+            )
+        else:
+            bot_tab = ft.Container(
+                content=ft.Column([
+                    ft.Text("Статус бота", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.DEEP_PURPLE_200, text_align=ft.TextAlign.CENTER),
+                    bot_status,
+                ], spacing=30, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=40,
+            )
 
         # --- Настройки ---
         settings_fields = []
@@ -317,15 +318,18 @@ def main(page: ft.Page):
             save_settings(settings)
             page.snack_bar = ft.SnackBar(ft.Text("Настройки сохранены!"))
             page.snack_bar.open = True
+            settings_status_text.value = "Настройки сохранены!"
             page.update()
 
+        settings_status_text = ft.Text("", color=ft.Colors.GREEN_400)
         save_btn = ft.FilledButton("Сохранить настройки", icon=ft.Icons.SAVE, on_click=save_settings_click, style=ft.ButtonStyle(bgcolor=ft.Colors.DEEP_PURPLE_400, color=ft.Colors.WHITE))
         guild_tab = ft.Container(
             content=ft.Column([
                 ft.Text("Настройки серверов", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.DEEP_PURPLE_200),
                 guild_dropdown,
                 settings_column,
-                save_btn
+                save_btn,
+                settings_status_text
             ], spacing=20),
             padding=30,
         )
