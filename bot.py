@@ -14,6 +14,7 @@ async def main():
     await bot.load_extension("events.events_cog")
     await bot.load_extension("tasks.scheduled_messages_task")
     await bot.load_extension("tasks.role_report_task")
+    await bot.load_extension("tasks.birthday_task")
     logger.info("Extensions loaded. Starting bot...")
     await bot.start(TOKEN)
     logger.info("Bot stopped.")

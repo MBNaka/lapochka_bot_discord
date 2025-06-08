@@ -31,12 +31,6 @@ class Events(commands.Cog):
         logger.info("Slash commands synced!")
         logger.info(f"Bot is ready. Logged in as {self.bot.user}")
         # Запуск задач для поздравлений и снятия роли именинника
-        birthday_cog = self.bot.get_cog("BirthdayTask")
-        if birthday_cog and not hasattr(birthday_cog, "_tasks_started"):
-            birthday_cog._tasks_started = True
-            self.bot.loop.create_task(birthday_cog.birthday_check_loop())
-            self.bot.loop.create_task(birthday_cog.birthday_role_cleanup_loop())
-
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         """Обработка события присоединения к новому серверу."""
