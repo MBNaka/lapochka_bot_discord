@@ -1,3 +1,10 @@
+spring:
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      enabled: false
+
 server:
   port: 2333
 
@@ -5,7 +12,7 @@ lavalink:
   server:
     password: "YashaLava"
     sources:
-      youtube: false 
+      youtube: false
 
 plugins:
   youtube:
@@ -51,7 +58,7 @@ plugins:
       playback: true
   lavasrc:
     sources:
-      youtube: true 
+      youtube: true
       yandexmusic: true
       vkmusic: true
     yandexmusic:
@@ -61,6 +68,6 @@ plugins:
       userToken: "vk1.a.PulXNdyNzAS8F8KR1nkQGo0iyJXOGmIipgmV3UcC9eTICXLBwRXw0qbhV43b9aVITfqB-blu6Z_EKrsmK9AfY4nJFDsKPuk8G1HRvymRyvwt1TrGftNBr5LMstouxfFV5AKeILgIRD_IfY4OnixI9fT3VHmyEwmhUnmEwcAKSJj8w0oPijJbwt0O9RdYhvFNoOi4O1mBfxhlh6Y9GYOb8w"
     youtube:
       countryCode: "RU"
-      playlistLoadLimit: 1 # The number of pages at 100 tracks each
-      albumLoadLimit: 1 # The number of pages at 50 tracks each
-      artistLoadLimit: 1 # The number of pages at 10 tracks each
+      playlistLoadLimit: 1
+      albumLoadLimit: 1
+      artistLoadLimit: 1

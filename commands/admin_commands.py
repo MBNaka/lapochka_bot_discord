@@ -176,14 +176,13 @@ class AdminCommands(commands.Cog):
         if not check_admin(interaction):
             await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
             return
-        async def isChannelEmpty(guild_id: int):
+        async def is_channel_empty(guild_id: int):
             if await get_guild_setting(guild_id, "WELCOME_CHANNEL_ID") is None:
                 return True
             return False
         match action:
             case "enable":
-                channel_id = await get_guild_setting(interaction.guild_id, "WELCOME_CHANNEL_ID")
-                if await isChannelEmpty(interaction.guild_id) is True:
+                if await is_channel_empty(interaction.guild_id) is True:
                     await interaction.response.send_message(
                         MESSAGES["no_channel"], ephemeral=True
                     )

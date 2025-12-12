@@ -1,11 +1,12 @@
 import asyncio
 from database import database
-from lavalink import run_lavalink
-from loader import TOKEN, bot, logger
+from loader import TOKEN, bot, logger, init_aiohttp_session
 
 database.init_db()
 
 async def main():
+    logger.info("Initializing aiohttp session...")
+    await init_aiohttp_session()
     logger.info("Loading extensions...")
     await bot.load_extension("commands.music_commands")
     await bot.load_extension("commands.admin_commands")

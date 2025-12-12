@@ -88,7 +88,7 @@ EXTENSIONS = [
 
 async def init_aiohttp_session():
     global aiohttp_session
-    if aiohttp_session is None:
+    if aiohttp_session is None or aiohttp_session.closed:
         aiohttp_session = aiohttp.ClientSession()
 
 

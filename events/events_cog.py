@@ -153,7 +153,6 @@ class Events(commands.Cog):
                 logger.info("Player disconnected after queue end.")
             except Exception as e:
                 logger.error(f"Error during empty queue handling: {e}")
-            return
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
