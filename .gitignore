@@ -3,3 +3,6 @@
 logs/
 __pycache__/
 *.pyc
+lapochka_bot.service
+lavalink.service
+settings.json
