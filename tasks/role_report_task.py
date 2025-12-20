@@ -44,7 +44,7 @@ class RoleReportTask(commands.Cog):
                     if not role:
                         continue
                     count = sum(1 for m in guild.members if role in m.roles)
-                    lines.append(f"**{role.name}**: {count}")
+                    lines.append(f"**{role.name}**: {count}") if count > 0 else None
                 text = "\n".join(lines)
                 # Обновление или отправка сообщения
                 msg = None

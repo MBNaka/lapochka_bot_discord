@@ -16,19 +16,20 @@ lavalink:
 
 plugins:
   youtube:
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/"
     enabled: true
     oauth:
       enabled: true
-      oauth2:
-        refreshToken: "1//09jhv5UoukuLXCgYIARAAGAkSNwF-L9Irq8gYQ8Mrvd3jaoA8EdYaj3uCOM-w0m7gns7TFOlmSU0fMBUuCnMjFv03ejjhnuH2P5M"
-        skipInitialization: true
+      refreshToken: "1//09ifUSRfLt5-8CgYIARAAGAkSNwF-L9Irv9S9udeyywnDhjqDRFZwC6Noc2ggpxmmQvzKb951s-RqPsoGnFPGVQUAZJikj_vfou8"
+      skipInitialization: true
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
       - "ANDROID_MUSIC"
-      - "MUSIC"
       - "WEB"
+      - "MUSIC"
       - "WEBEMBEDDED"
       - "TVHTML5EMBEDDED"
     ANDROID_MUSIC:

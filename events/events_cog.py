@@ -58,7 +58,7 @@ class Events(commands.Cog):
             "WELCOME_CHANNEL_ID": gentry.get("WELCOME_CHANNEL_ID"),
             "WELCOME_MESSAGE": gentry.get("WELCOME_MESSAGE", "Привет, {member}! Добро пожаловать на сервер {guild}!\nНадеемся, тебе у нас понравится!"),
             "WELCOME_EMBED": gentry.get("WELCOME_EMBED", {
-                "TEXT": ":flag_ru: Alatulya, <@{username}>! Рады приветствовать тебя на нашем сервере!\nПожалуйста, ознакомься с правилами сообщества: <#{channel}>\n\n:anusauk: Alatulya, <@456790730715955200>! We're glad to have you on the our server!\nPlease, familiarize yourself with the server rules: <#{channel}>",
+                "TEXT": ":flag_ru: Alatulya, <@{username}>! Рады приветствовать тебя на нашем сервере!\nПожалуйста, ознакомься с правилами сообщества: <#{channel}>\n\n:anusauk: Alatulya, <@{username}>! We're glad to have you on the our server!\nPlease, familiarize yourself with the server rules: <#{channel}>",
                 "THUMBNAIL_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353734947936010351/ezgif-6fe6ac1197de50.gif?ex=6827496a&is=6825f7ea&hm=82a3758ed333686afa0c4acc1596cbe58d5a872cf0a096c7a7f46b972a0f2e87&=&width=80&height=80",
                 "IMAGE_URL": "https://media.discordapp.net/attachments/1267898983666417786/1353735781184962631/ezgif-671abe36596d58.gif?ex=68274a31&is=6825f8b1&hm=4ed87f074f370f8be002edc7f78c28e3b7094cbfa3252f502d75776c8d037a8f&=&width=400&height=216"
             }),
