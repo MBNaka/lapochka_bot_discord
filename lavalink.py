@@ -4,6 +4,7 @@ import sys
 import signal
 import time
 import logging
+import threading
 
 # Настройка логирования
 logging.basicConfig(
@@ -11,60 +12,77 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def run_lavalink():
-    try:
-        lavalink_dir = os.path.join(os.path.dirname(__file__), "lavalink")
-        lavalink_jar = os.path.join(lavalink_dir, "Lavalink.jar")
-        lavalink_config = os.path.join(lavalink_dir, "application.yml")
+class LavalinkServer:
+    def __init__(self):
+        self.lavalink_dir = os.path.join(os.path.dirname(__file__), "lavalink")
+        self.lavalink_jar = os.path.join(self.lavalink_dir, "Lavalink.jar")
+        self.lavalink_config = os.path.join(self.lavalink_dir, "application.yml")
+        self.process = None
 
-        logging.info(f"Lavalink directory: {lavalink_dir}")
-        logging.info(f"Lavalink JAR file: {lavalink_jar}")
-        logging.info(f"Lavalink config file: {lavalink_config}")
-
-        if not os.path.exists(lavalink_jar):
-            logging.error(f"Lavalink.jar not found at {lavalink_jar}")
+    def start(self):
+        if not os.path.exists(self.lavalink_jar):
+            logging.error(f"Lavalink.jar not found at {self.lavalink_jar}")
             sys.exit(1)
-            
-        # Add Java memory settings for OpenJDK 21
-        lavalink_proc = subprocess.Popen(
+
+        logging.info(f"Lavalink directory: {self.lavalink_dir}")
+        logging.info(f"Lavalink JAR file: {self.lavalink_jar}")
+        logging.info(f"Lavalink config file: {self.lavalink_config}")
+
+        self.process = subprocess.Popen(
             [
                 "java",
-                "-Xmx256M",  # Максимальный размер кучи (256 MB)
-                "-Xms128M",  # Начальный размер кучи (128 MB)
-                "-XX:+UseG1GC",  # Использование сборщика мусора G1GC
-                "-XX:MaxRAMPercentage=75.0",  # Ограничение использования памяти до 75% доступной
+                "-Xmx256M",
+                "-Xms128M",
+                "-XX:+UseG1GC",
+                "-XX:MaxRAMPercentage=75.0",
                 "-jar",
-                lavalink_jar,
-                "--spring.config.location=file:" + lavalink_config,
+                self.lavalink_jar,
+                "--spring.config.location=file:" + self.lavalink_config,
             ],
-            cwd=lavalink_dir,
+            cwd=self.lavalink_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Объединяем stderr в stdout
+            text=True,
+            bufsize=1,
+            encoding='utf-8',
+            errors='replace'
         )
+
+        # Поток для вывода логов в реальном времени
+        log_thread = threading.Thread(target=self._stream_logs, daemon=True)
+        log_thread.start()
 
         logging.info("Lavalink server started")
 
         def signal_handler(signum, frame):
             logging.info("Shutting down Lavalink...")
-            lavalink_proc.terminate()
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
             sys.exit(0)
 
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
-        while True:
-            returncode = lavalink_proc.poll()
-            if returncode is not None:
-                logging.error(f"Lavalink exited with code {returncode}")
-                # Log stdout and stderr
-                for line in lavalink_proc.stdout:
-                    logging.info(line.strip())
-                for line in lavalink_proc.stderr:
-                    logging.error(line.strip())
-                sys.exit(returncode)
+        # Основной цикл — просто ждём, пока процесс жив
+        while self.process.poll() is None:
             time.sleep(1)
 
-    except Exception as e:
-        logging.error(f"Error: {str(e)}")
-        sys.exit(1)
+        logging.error(f"Lavalink exited with code {self.process.returncode}")
+        sys.exit(self.process.returncode)
+
+    def _stream_logs(self):
+        """Читаем вывод процесса и логируем в реальном времени"""
+        try:
+            for line in iter(self.process.stdout.readline, ''):
+                line = line.rstrip()
+                if line:
+                    logging.info(f"[Lavalink] {line}")
+        except Exception as e:
+            logging.error(f"Error reading Lavalink output: {e}")
 
 if __name__ == "__main__":
-    run_lavalink()
+    server = LavalinkServer()
+    server.start()

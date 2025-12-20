@@ -25,9 +25,16 @@ bot_log_handler = RotatingFileHandler(
 bot_log_handler.setFormatter(log_formatter)
 bot_log_handler.setLevel(logging.INFO)
 
+# Настройка root logger для цветного вывода в консоль (Windows Terminal, PowerShell)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+)
+
 logger = logging.getLogger("Lapochka_bot")
 logger.setLevel(logging.INFO)
 logger.addHandler(bot_log_handler)
+logger.propagate = True  # Важно: propagate=True, чтобы root logger выводил в консоль
 
 # Логгер для Wavelink
 wavelink_log_handler = RotatingFileHandler(
@@ -42,6 +49,7 @@ wavelink_log_handler.setLevel(logging.INFO)
 wavelink_logger = logging.getLogger("wavelink")
 wavelink_logger.setLevel(logging.INFO)
 wavelink_logger.addHandler(wavelink_log_handler)
+wavelink_logger.propagate = False
 
 # Логгер для Discord.py
 discord_log_handler = RotatingFileHandler(
@@ -56,6 +64,7 @@ discord_log_handler.setLevel(logging.INFO)
 discord_logger = logging.getLogger("discord")
 discord_logger.setLevel(logging.INFO)
 discord_logger.addHandler(discord_log_handler)
+discord_logger.propagate = False
 
 
 load_dotenv()
@@ -79,7 +88,7 @@ EXTENSIONS = [
 
 async def init_aiohttp_session():
     global aiohttp_session
-    if aiohttp_session is None:
+    if aiohttp_session is None or aiohttp_session.closed:
         aiohttp_session = aiohttp.ClientSession()
 
 

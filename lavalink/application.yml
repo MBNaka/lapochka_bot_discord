@@ -1,3 +1,10 @@
+spring:
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      enabled: false
+
 server:
   port: 2333
 
@@ -5,23 +12,24 @@ lavalink:
   server:
     password: "YashaLava"
     sources:
-      youtube: false 
+      youtube: false
 
 plugins:
   youtube:
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/"
     enabled: true
     oauth:
       enabled: true
-      oauth2:
-        refreshToken: "1//09jhv5UoukuLXCgYIARAAGAkSNwF-L9Irq8gYQ8Mrvd3jaoA8EdYaj3uCOM-w0m7gns7TFOlmSU0fMBUuCnMjFv03ejjhnuH2P5M"
-        skipInitialization: true
+      refreshToken: "1//09ifUSRfLt5-8CgYIARAAGAkSNwF-L9Irv9S9udeyywnDhjqDRFZwC6Noc2ggpxmmQvzKb951s-RqPsoGnFPGVQUAZJikj_vfou8"
+      skipInitialization: true
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
       - "ANDROID_MUSIC"
-      - "MUSIC"
       - "WEB"
+      - "MUSIC"
       - "WEBEMBEDDED"
       - "TVHTML5EMBEDDED"
     ANDROID_MUSIC:
@@ -51,7 +59,7 @@ plugins:
       playback: true
   lavasrc:
     sources:
-      youtube: true 
+      youtube: true
       yandexmusic: true
       vkmusic: true
     yandexmusic:
@@ -61,6 +69,6 @@ plugins:
       userToken: "vk1.a.PulXNdyNzAS8F8KR1nkQGo0iyJXOGmIipgmV3UcC9eTICXLBwRXw0qbhV43b9aVITfqB-blu6Z_EKrsmK9AfY4nJFDsKPuk8G1HRvymRyvwt1TrGftNBr5LMstouxfFV5AKeILgIRD_IfY4OnixI9fT3VHmyEwmhUnmEwcAKSJj8w0oPijJbwt0O9RdYhvFNoOi4O1mBfxhlh6Y9GYOb8w"
     youtube:
       countryCode: "RU"
-      playlistLoadLimit: 1 # The number of pages at 100 tracks each
-      albumLoadLimit: 1 # The number of pages at 50 tracks each
-      artistLoadLimit: 1 # The number of pages at 10 tracks each
+      playlistLoadLimit: 1
+      albumLoadLimit: 1
+      artistLoadLimit: 1
