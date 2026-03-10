@@ -1,9 +1,11 @@
 import discord
+import time
 import wavelink
 from discord.ext import commands
 from database import database
 from loader import LAVALINK_HOST, LAVALINK_PASSWORD, init_aiohttp_session, logger
 from utils.settings import load_settings, save_settings, get_guild_setting
+from utils.structured_log import log_event
 from utils.messages import get_welcome_embed
 from embeds import guild_join, queue_empty_embed, track_embed
 import embeds.disconnect_embed
@@ -15,6 +17,24 @@ class Events(commands.Cog):
         self._wavelink_connected = False
         self._commands_synced = False
         logger.info("Events Cog инициализирован")
+
+    @staticmethod
+    def _track_key(track) -> str:
+        if not track:
+            return "unknown"
+        identifier = getattr(track, "identifier", None) or getattr(track, "title", "unknown")
+        return str(identifier)
+
+    @staticmethod
+    def _is_duplicate_event(player: wavelink.Player, event_name: str, key: str, window_seconds: float = 5.0) -> bool:
+        attr = f"_last_{event_name}_event"
+        now = time.monotonic()
+        last = getattr(player, attr, None)
+        setattr(player, attr, (key, now))
+        if not last:
+            return False
+        last_key, last_ts = last
+        return last_key == key and (now - last_ts) <= window_seconds
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -147,8 +167,25 @@ class Events(commands.Cog):
         if not player:
             logger.error("Player is None.")
             return
+        track_key = self._track_key(payload.track)
+        if self._is_duplicate_event(player, "track_end", track_key):
+            log_event(
+                logger,
+                "warning",
+                "Duplicate track_end ignored",
+                guild_id=player.guild.id,
+                track=track_key,
+            )
+            return
+
         track_title = payload.track.title if payload.track else "unknown"
-        logger.info(f"Track ended: {track_title}. Guild: {player.guild.name}")
+        log_event(
+            logger,
+            "info",
+            "Track ended",
+            guild_id=player.guild.id,
+            track=track_title,
+        )
         if player.queue.is_empty:
             logger.info(f"Queue is empty for {player.guild.name}. Disconnecting...")
             try:
@@ -169,13 +206,30 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         """Обработка события начала трека Wavelink."""
-        logger.info("on_wavelink_track_start")
         player = payload.player
         if not player:
             logger.error("Player is None")
             return
         original = payload.original
         track = payload.track
+        track_key = self._track_key(track)
+        if self._is_duplicate_event(player, "track_start", track_key):
+            log_event(
+                logger,
+                "warning",
+                "Duplicate track_start ignored",
+                guild_id=player.guild.id,
+                track=track_key,
+            )
+            return
+
+        log_event(
+            logger,
+            "info",
+            "Track started",
+            guild_id=player.guild.id,
+            track=track.title if track else "unknown",
+        )
         try:
             embed, file = await track_embed.get_embed(track, original)
             last_message_id = getattr(player, "last_track_message", None)

@@ -5,6 +5,7 @@ from discord.ui import View, Modal, TextInput
 
 from utils.settings import load_settings, save_settings
 from utils.messages import MESSAGES
+from utils.timezones import is_valid_timezone
 from embeds import about_embed, settings_embed
 
 class WelcomeMessageModal(Modal, title="Изменить приветственное сообщение (устар.)"):
@@ -190,6 +191,7 @@ class Setup(commands.Cog):
             f"BIRTHDAY_ROLE_ID: {mark(guild_settings.get('BIRTHDAY_ROLE_ID'))}",
             f"ROLE_REPORT_CHANNEL_ID: {mark(guild_settings.get('ROLE_REPORT_CHANNEL_ID'))}",
             f"WELCOME_EMBED: {mark(guild_settings.get('WELCOME_EMBED'))}",
+            f"TIMEZONE: {guild_settings.get('TIMEZONE', 'UTC')}",
         ]
 
         embed = discord.Embed(
@@ -198,6 +200,26 @@ class Setup(commands.Cog):
             color=discord.Color.blurple(),
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="set_timezone", description="Установить часовой пояс сервера")
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.describe(timezone="IANA timezone, например Europe/Moscow")
+    async def set_timezone(self, interaction: Interaction, timezone: str):
+        tz_name = timezone.strip()
+        if not is_valid_timezone(tz_name):
+            await interaction.response.send_message(
+                "❌ Неверный timezone. Пример: `Europe/Moscow`, `UTC`, `America/New_York`.",
+                ephemeral=True,
+            )
+            return
+
+        settings = await load_settings()
+        guild_settings = settings.setdefault("guilds", {}).setdefault(str(interaction.guild.id), {})
+        guild_settings["TIMEZONE"] = tz_name
+        await save_settings(settings)
+        await interaction.response.send_message(
+            f"✅ Часовой пояс сервера установлен: `{tz_name}`", ephemeral=True
+        )
 
     @setup.error
     async def setup_error(self, interaction: Interaction, error):
@@ -208,6 +230,13 @@ class Setup(commands.Cog):
 
     @setup_status.error
     async def setup_status_error(self, interaction: Interaction, error):
+        if isinstance(error, app_commands.errors.MissingPermissions):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
+        else:
+            await interaction.response.send_message(f"Произошла ошибка: {error}", ephemeral=True)
+
+    @set_timezone.error
+    async def set_timezone_error(self, interaction: Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
             await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
         else:

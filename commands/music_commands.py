@@ -6,6 +6,7 @@ from discord.ext import commands
 from embeds import connect_embed, error_embed
 from loader import logger
 from utils.messages import MESSAGES
+from utils.structured_log import log_event
 
 
 class MusicCommands(commands.Cog):
@@ -42,7 +43,13 @@ class MusicCommands(commands.Cog):
         logger.debug(f"{interaction.user.name} use /play. Query: {query}")
 
         if not interaction.user.voice:
-            logger.info(f"{interaction.user.name} is not in a voice channel")
+            log_event(
+                logger,
+                "info",
+                "User is not in voice channel",
+                guild_id=interaction.guild.id,
+                user_id=interaction.user.id,
+            )
             return await interaction.followup.send(MESSAGES["not_in_voice"], ephemeral=True)
 
         player = interaction.guild.voice_client
@@ -53,7 +60,14 @@ class MusicCommands(commands.Cog):
                 player.autoplay = wavelink.AutoPlayMode.partial
                 player.inactive_timeout = 60
             except Exception as e:
-                logger.error(f"Error connecting to voice channel: {e}")
+                log_event(
+                    logger,
+                    "error",
+                    "Error connecting to voice channel",
+                    guild_id=interaction.guild.id,
+                    user_id=interaction.user.id,
+                    error=e,
+                )
                 return await interaction.followup.send(
                     MESSAGES["connect_error"], ephemeral=True
                 )
@@ -61,7 +75,15 @@ class MusicCommands(commands.Cog):
         try:
             tracks = await wavelink.Playable.search(query)
         except Exception as e:
-            logger.error(f"Error searching for track: {e}")
+            log_event(
+                logger,
+                "error",
+                "Error searching for track",
+                guild_id=interaction.guild.id,
+                user_id=interaction.user.id,
+                query=query,
+                error=e,
+            )
             return await interaction.followup.send(
                 embed=await error_embed.get_embed(
                     "Скорее всего твоя ссылка не поддерживается. Попробуй ввести другую или найди музыку текстом"
@@ -111,7 +133,14 @@ class MusicCommands(commands.Cog):
 
         embed.description = playlist_info
         await interaction.followup.send(embed=embed, ephemeral=True)
-        logger.info(f"{interaction.user.name} success added {first_track.title}")
+        log_event(
+            logger,
+            "info",
+            "Track queued",
+            guild_id=interaction.guild.id,
+            user_id=interaction.user.id,
+            track=first_track.title,
+        )
 
     @app_commands.command(name="skip", description="Пропустить трек")
     async def skip(self, interaction: discord.Interaction):

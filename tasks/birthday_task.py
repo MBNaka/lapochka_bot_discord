@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from datetime import time as dtime
 from datetime import timedelta
 
@@ -9,6 +9,8 @@ from discord.ext import commands
 from database import database
 from loader import logger
 from utils.settings import get_guild_setting
+from utils.structured_log import log_event
+from utils.timezones import now_in_timezone
 
 
 def seconds_until_midnight():
@@ -45,34 +47,48 @@ class BirthdayTask(commands.Cog):
     async def birthday_check_loop(self):
         while True:
             try:
-                logger.info("[BirthdayTask] birthday_check_loop started")
-                logger.info(f"[BirthdayTask] Guilds loaded: {len(self.bot.guilds)}")
+                log_event(
+                    logger,
+                    "info",
+                    "[BirthdayTask] birthday_check_loop started",
+                    guilds_count=len(self.bot.guilds),
+                )
                 await self._check_birthdays()
             except asyncio.CancelledError:
                 logger.info("[BirthdayTask] Birthday loop cancelled")
                 raise
             except Exception as e:
                 logger.exception(f"[BirthdayTask] Birthday loop error: {e}")
-            await asyncio.sleep(seconds_until_midnight())
+            # Проверяем периодически, потому что у серверов может быть разный часовой пояс.
+            await asyncio.sleep(900)
 
     async def _check_birthdays(self):
-        today = datetime.now().strftime("%d.%m")
-        today_key = datetime.now().strftime("%Y-%m-%d")
-        logger.info(f"[BirthdayTask] Checking birthdays for {today}")
         for guild in self.bot.guilds:
             guild_id = str(guild.id)
+            guild_tz = await get_guild_setting(guild_id, "TIMEZONE", "UTC")
+            local_now = now_in_timezone(guild_tz)
+            today = local_now.strftime("%d.%m")
+            today_key = local_now.strftime("%Y-%m-%d")
             birthday_channel_id = await get_guild_setting(
                 guild_id, "BIRTHDAY_CHANNEL_ID"
             )
             if not birthday_channel_id:
-                logger.warning(
-                    f"[BirthdayTask] No BIRTHDAY_CHANNEL_ID for guild {guild_id}"
+                log_event(
+                    logger,
+                    "warning",
+                    "[BirthdayTask] Missing BIRTHDAY_CHANNEL_ID",
+                    guild_id=guild_id,
+                    timezone=guild_tz,
                 )
                 continue
             channel = self.bot.get_channel(int(birthday_channel_id))
             if not channel:
-                logger.error(
-                    f"[BirthdayTask] Birthday channel not found for guild {guild_id}."
+                log_event(
+                    logger,
+                    "error",
+                    "[BirthdayTask] Birthday channel not found",
+                    guild_id=guild_id,
+                    channel_id=birthday_channel_id,
                 )
                 continue
             user_ids = await database.run_in_thread(
@@ -94,8 +110,12 @@ class BirthdayTask(commands.Cog):
                     database.get_greeting, guild_id, user_id
                 )
                 if not greeting:
-                    logger.warning(
-                        f"[BirthdayTask] No greeting found for user {user_id} in guild {guild_id}."
+                    log_event(
+                        logger,
+                        "warning",
+                        "[BirthdayTask] No greeting found",
+                        guild_id=guild_id,
+                        user_id=user_id,
                     )
                     continue
                 embed = discord.Embed(
@@ -120,8 +140,13 @@ class BirthdayTask(commands.Cog):
                         database.mark_birthday_delivered, guild_id, user_id, today_key
                     )
                 except Exception as e:
-                    logger.error(
-                        f"[BirthdayTask] Failed to send birthday message for user {user_id} in guild {guild_id}: {e}"
+                    log_event(
+                        logger,
+                        "error",
+                        "[BirthdayTask] Failed to send birthday message",
+                        guild_id=guild_id,
+                        user_id=user_id,
+                        error=e,
                     )
                     continue
                 birthday_role_id = await get_guild_setting(guild_id, "BIRTHDAY_ROLE_ID")
@@ -137,12 +162,21 @@ class BirthdayTask(commands.Cog):
                                 f"[BirthdayTask] Assigned birthday role to {member} in guild {guild_id}."
                             )
                         except discord.Forbidden:
-                            logger.error(
-                                f"[BirthdayTask] Missing permissions to assign role to {member} in guild {guild_id}. Skipping."
+                            log_event(
+                                logger,
+                                "error",
+                                "[BirthdayTask] Missing permission to assign birthday role",
+                                guild_id=guild_id,
+                                user_id=user_id,
                             )
                         except Exception as e:
-                            logger.error(
-                                f"[BirthdayTask] Unexpected error assigning role: {e}"
+                            log_event(
+                                logger,
+                                "error",
+                                "[BirthdayTask] Unexpected error assigning role",
+                                guild_id=guild_id,
+                                user_id=user_id,
+                                error=e,
                             )
 
     async def birthday_role_cleanup_loop(self):
@@ -165,9 +199,11 @@ class BirthdayTask(commands.Cog):
                     for user_id, assigned_at in assigned_rows:
                         try:
                             assigned_time = datetime.fromisoformat(assigned_at)
+                            if assigned_time.tzinfo is None:
+                                assigned_time = assigned_time.replace(tzinfo=timezone.utc)
                         except Exception:
                             continue
-                        if datetime.now() - assigned_time >= timedelta(days=1):
+                        if datetime.now(timezone.utc) - assigned_time >= timedelta(days=1):
                             member = guild.get_member(int(user_id))
                             if member and role in member.roles:
                                 await member.remove_roles(

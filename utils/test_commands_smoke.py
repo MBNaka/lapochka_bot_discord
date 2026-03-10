@@ -63,3 +63,12 @@ async def test_setup_status_sends_embed(monkeypatch):
     embed = kwargs.get("embed")
     assert embed is not None
     assert "WELCOME_CHANNEL_ID: OK" in embed.description
+
+
+def test_music_queue_text_truncation_helper():
+    cog = MusicCommands(bot=SimpleNamespace())
+    queue = [SimpleNamespace(title=f"Track {i}") for i in range(30)]
+    text = cog._format_queue_text(queue, limit=20)
+    assert "1. Track 0" in text
+    assert "20. Track 19" in text
+    assert "... и ещё 10 трек(ов)" in text

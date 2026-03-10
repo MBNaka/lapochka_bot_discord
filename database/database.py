@@ -244,13 +244,13 @@ def get_all_birthdays_on_date(guild_id: str, date_str: str):
 
 
 def assign_birthday_role(guild_id: str, user_id: str):
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     with get_connection() as conn:
         c = conn.cursor()
         c.execute(
             "INSERT OR REPLACE INTO birthday_role_assignments (guild_id, user_id, assigned_at) VALUES (?, ?, ?)",
-            (guild_id, user_id, datetime.now().isoformat()),
+            (guild_id, user_id, datetime.now(timezone.utc).isoformat()),
         )
         conn.commit()
 
