@@ -643,8 +643,8 @@ def main(page: ft.Page):
 
             def refresh_msgs():
                 msg_list_column.controls.clear()
-                msgs = db.get_scheduled_messages(guild_id)
-                for msg_id, repeat, dt, channel_id, message, enabled in msgs:
+                msgs = db.get_scheduled_messages_with_meta(guild_id)
+                for msg_id, repeat, dt, channel_id, message, enabled, last_error, attempt_count, last_attempt_at in msgs:
                     def make_remove_btn(mid):
                         def on_remove_click(e):
                             db.remove_scheduled_message(guild_id, mid)
@@ -662,12 +662,17 @@ def main(page: ft.Page):
                             refresh_msgs()
                             page.update()
                         return ft.IconButton(icon=ft.Icons.PAUSE if enabled else ft.Icons.PLAY_ARROW, tooltip="Вкл/Выкл", on_click=on_enable_click)
+
+                    error_preview = last_error[:40] + "..." if last_error and len(last_error) > 40 else (last_error or "-")
                     msg_row = ft.Row([
                         ft.Text(f"ID: {msg_id}", size=12, color=ft.Colors.GREY_500),
                         ft.Text(f"Повтор: {repeat_texts.get(repeat, repeat)}", size=12),
                         ft.Text(f"Время: {dt}", size=12),
                         ft.Text(f"Канал: {channel_id}", size=12),
                         ft.Text(f"Текст: {message[:30]}{'...' if len(message)>30 else ''}", size=12),
+                        ft.Text(f"Попыток: {attempt_count or 0}", size=12),
+                        ft.Text(f"Последняя: {last_attempt_at or '-'}", size=12),
+                        ft.Text(f"Ошибка: {error_preview}", size=12, color=ft.Colors.RED_300 if last_error else ft.Colors.GREY_500),
                         ft.Text("Вкл" if enabled else "Выкл", size=12, color=ft.Colors.GREEN_400 if enabled else ft.Colors.RED_400),
                         make_enable_btn(msg_id, enabled),
                         make_remove_btn(msg_id)

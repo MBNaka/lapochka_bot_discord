@@ -40,6 +40,12 @@ class ScheduledMessagesTask(commands.Cog):
                             dt = datetime.fromisoformat(dt_str)
                         except Exception:
                             logger.error(f"[ScheduledMessagesTask] Invalid datetime: {dt_str}")
+                            await database.run_in_thread(
+                                database.record_scheduled_message_failure,
+                                guild_id,
+                                msg_id,
+                                f"Invalid datetime format: {dt_str}",
+                            )
                             continue
                         if now >= dt:
                             sent_successfully = False
@@ -51,13 +57,31 @@ class ScheduledMessagesTask(commands.Cog):
                                     logger.info(f"[ScheduledMessagesTask] Sent scheduled message {msg_id} to {channel_id} in guild {guild_id}")
                                 except Exception as e:
                                     logger.error(f"[ScheduledMessagesTask] Failed to send message: {e}")
+                                    await database.run_in_thread(
+                                        database.record_scheduled_message_failure,
+                                        guild_id,
+                                        msg_id,
+                                        f"Send failed: {e}",
+                                    )
                             else:
                                 logger.error(
                                     f"[ScheduledMessagesTask] Channel {channel_id} not found for scheduled message {msg_id} in guild {guild_id}"
                                 )
+                                await database.run_in_thread(
+                                    database.record_scheduled_message_failure,
+                                    guild_id,
+                                    msg_id,
+                                    f"Channel not found: {channel_id}",
+                                )
 
                             if not sent_successfully:
                                 continue
+
+                            await database.run_in_thread(
+                                database.record_scheduled_message_success,
+                                guild_id,
+                                msg_id,
+                            )
 
                             # Обработка повторения
                             if repeat == "never":

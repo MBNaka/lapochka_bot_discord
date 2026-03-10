@@ -103,10 +103,25 @@ def init_db():
                 channel_id TEXT NOT NULL,
                 message TEXT NOT NULL,
                 enabled INTEGER DEFAULT 1,
+                last_error TEXT,
+                attempt_count INTEGER DEFAULT 0,
+                last_attempt_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'''
         )
+
+        # Мягкая миграция для существующих БД: добавляем столбцы, если их ещё нет
+        c.execute("PRAGMA table_info(scheduled_messages)")
+        columns = {row[1] for row in c.fetchall()}
+        if "last_error" not in columns:
+            c.execute("ALTER TABLE scheduled_messages ADD COLUMN last_error TEXT")
+        if "attempt_count" not in columns:
+            c.execute(
+                "ALTER TABLE scheduled_messages ADD COLUMN attempt_count INTEGER DEFAULT 0"
+            )
+        if "last_attempt_at" not in columns:
+            c.execute("ALTER TABLE scheduled_messages ADD COLUMN last_attempt_at TEXT")
         conn.commit()
 
 
@@ -283,8 +298,10 @@ def mark_birthday_delivered(guild_id: str, user_id: str, delivery_date: str):
 def add_scheduled_message(guild_id, repeat, datetime_str, channel_id, message, enabled=1):
     with get_connection() as conn:
         c = conn.cursor()
-        c.execute('''INSERT INTO scheduled_messages (guild_id, repeat, datetime, channel_id, message, enabled) VALUES (?, ?, ?, ?, ?, ?)''',
-                  (guild_id, repeat, datetime_str, channel_id, message, enabled))
+        c.execute(
+            '''INSERT INTO scheduled_messages (guild_id, repeat, datetime, channel_id, message, enabled, last_error, attempt_count, last_attempt_at) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, NULL)''',
+            (guild_id, repeat, datetime_str, channel_id, message, enabled),
+        )
         conn.commit()
         return c.lastrowid
 
@@ -293,6 +310,19 @@ def get_scheduled_messages(guild_id):
     with get_connection() as conn:
         c = conn.cursor()
         c.execute('''SELECT id, repeat, datetime, channel_id, message, enabled FROM scheduled_messages WHERE guild_id = ? ORDER BY datetime(datetime)''', (guild_id,))
+        return c.fetchall()
+
+
+def get_scheduled_messages_with_meta(guild_id):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            '''SELECT id, repeat, datetime, channel_id, message, enabled, last_error, attempt_count, last_attempt_at
+               FROM scheduled_messages
+               WHERE guild_id = ?
+               ORDER BY datetime(datetime)''',
+            (guild_id,),
+        )
         return c.fetchall()
 
 
@@ -308,4 +338,34 @@ def update_scheduled_message(guild_id, msg_id, repeat, datetime_str, channel_id,
         c = conn.cursor()
         c.execute('''UPDATE scheduled_messages SET repeat=?, datetime=?, channel_id=?, message=?, enabled=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=? AND id=?''',
                   (repeat, datetime_str, channel_id, message, enabled, guild_id, msg_id))
+        conn.commit()
+
+
+def record_scheduled_message_failure(guild_id, msg_id, error_message):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            '''UPDATE scheduled_messages
+               SET last_error = ?,
+                   attempt_count = COALESCE(attempt_count, 0) + 1,
+                   last_attempt_at = CURRENT_TIMESTAMP,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE guild_id = ? AND id = ?''',
+            (str(error_message), guild_id, msg_id),
+        )
+        conn.commit()
+
+
+def record_scheduled_message_success(guild_id, msg_id):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            '''UPDATE scheduled_messages
+               SET last_error = NULL,
+                   attempt_count = COALESCE(attempt_count, 0) + 1,
+                   last_attempt_at = CURRENT_TIMESTAMP,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE guild_id = ? AND id = ?''',
+            (guild_id, msg_id),
+        )
         conn.commit()
