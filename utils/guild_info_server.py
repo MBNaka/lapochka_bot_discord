@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN") or "<YOUR_DISCORD_BOT_TOKEN>"
+DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 PORT = int(os.environ.get("GUILD_INFO_PORT") or 8765)
 
 intents = discord.Intents.none()
@@ -63,5 +63,7 @@ async def handle_guild_by_id(request):
     return web.Response(status=404, text="Guild not found")
 
 if __name__ == "__main__":
+    if not DISCORD_TOKEN:
+        raise RuntimeError("DISCORD_TOKEN is not set for guild_info_server")
     logger.info("[guild_info_server] Bot starting...")
     bot.run(DISCORD_TOKEN)

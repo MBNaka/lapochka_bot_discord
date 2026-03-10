@@ -27,7 +27,7 @@ async def get_guild_setting(guild_id, key, default=None):
 
 async def get_main_setting(key, default=None):
     settings = await load_settings()
-    return settings["main"].get(str(key), {})
+    return settings.get("main", {}).get(str(key), default)
 
 
 async def set_guild_setting(guild_id, key, value):

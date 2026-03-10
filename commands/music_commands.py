@@ -201,13 +201,13 @@ class MusicCommands(commands.Cog):
         player: wavelink.Player = interaction.guild.voice_client
         if not player or not player.queue:
             logger.info(f"{interaction.user.name}. Player is not playing")
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 MESSAGES["queue_empty"], ephemeral=True
             )
         queue_text = "\n".join(
             f"{i + 1}. {track.title}" for i, track in enumerate(player.queue)
         )
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"🔹 **Очередь:**\n{queue_text}", ephemeral=True
         )
         logger.info(f"{interaction.user.name} success queue. Queue: {queue_text}")

@@ -20,39 +20,76 @@ class ScheduledMessagesTask(commands.Cog):
     async def cog_load(self):
         self._task = asyncio.create_task(self.scheduled_messages_loop())
 
+    def cog_unload(self):
+        if self._task:
+            self._task.cancel()
+
     async def scheduled_messages_loop(self):
         await self.bot.wait_until_ready()
         while True:
-            now = datetime.now()
-            for guild in self.bot.guilds:
-                guild_id = str(guild.id)
-                messages = database.get_scheduled_messages(guild_id)
-                for msg in messages:
-                    msg_id, repeat, dt_str, channel_id, text, enabled = msg
-                    if not enabled:
-                        continue
-                    try:
-                        dt = datetime.fromisoformat(dt_str)
-                    except Exception:
-                        logger.error(f"[ScheduledMessagesTask] Invalid datetime: {dt_str}")
-                        continue
-                    if now >= dt:
-                        channel = self.bot.get_channel(int(channel_id))
-                        if channel:
-                            try:
-                                await channel.send(text)
-                                logger.info(f"[ScheduledMessagesTask] Sent scheduled message {msg_id} to {channel_id} in guild {guild_id}")
-                            except Exception as e:
-                                logger.error(f"[ScheduledMessagesTask] Failed to send message: {e}")
-                        # Обработка повторения
-                        if repeat == "never":
-                            database.update_scheduled_message(guild_id, msg_id, repeat, dt_str, channel_id, text, enabled=0)
-                        else:
-                            next_dt = self.get_next_datetime(dt, repeat)
-                            if next_dt:
-                                database.update_scheduled_message(guild_id, msg_id, repeat, next_dt.isoformat(), channel_id, text, enabled=1)
+            try:
+                now = datetime.now()
+                for guild in self.bot.guilds:
+                    guild_id = str(guild.id)
+                    messages = await database.run_in_thread(database.get_scheduled_messages, guild_id)
+                    for msg in messages:
+                        msg_id, repeat, dt_str, channel_id, text, enabled = msg
+                        if not enabled:
+                            continue
+                        try:
+                            dt = datetime.fromisoformat(dt_str)
+                        except Exception:
+                            logger.error(f"[ScheduledMessagesTask] Invalid datetime: {dt_str}")
+                            continue
+                        if now >= dt:
+                            channel = self.bot.get_channel(int(channel_id))
+                            if channel:
+                                try:
+                                    await channel.send(text)
+                                    logger.info(f"[ScheduledMessagesTask] Sent scheduled message {msg_id} to {channel_id} in guild {guild_id}")
+                                except Exception as e:
+                                    logger.error(f"[ScheduledMessagesTask] Failed to send message: {e}")
+                            # Обработка повторения
+                            if repeat == "never":
+                                await database.run_in_thread(
+                                    database.update_scheduled_message,
+                                    guild_id,
+                                    msg_id,
+                                    repeat,
+                                    dt_str,
+                                    channel_id,
+                                    text,
+                                    0,
+                                )
                             else:
-                                database.update_scheduled_message(guild_id, msg_id, repeat, dt_str, channel_id, text, enabled=0)
+                                next_dt = self.get_next_datetime(dt, repeat)
+                                if next_dt:
+                                    await database.run_in_thread(
+                                        database.update_scheduled_message,
+                                        guild_id,
+                                        msg_id,
+                                        repeat,
+                                        next_dt.isoformat(),
+                                        channel_id,
+                                        text,
+                                        1,
+                                    )
+                                else:
+                                    await database.run_in_thread(
+                                        database.update_scheduled_message,
+                                        guild_id,
+                                        msg_id,
+                                        repeat,
+                                        dt_str,
+                                        channel_id,
+                                        text,
+                                        0,
+                                    )
+            except asyncio.CancelledError:
+                logger.info("[ScheduledMessagesTask] Loop cancelled")
+                raise
+            except Exception as e:
+                logger.exception(f"[ScheduledMessagesTask] Loop error: {e}")
             await asyncio.sleep(60)
 
     def get_next_datetime(self, dt, repeat):

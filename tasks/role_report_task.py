@@ -1,6 +1,5 @@
 import discord
 from discord.ext import tasks, commands
-import asyncio
 from utils import settings as settings_utils
 
 class RoleReportTask(commands.Cog):
@@ -13,7 +12,6 @@ class RoleReportTask(commands.Cog):
 
     @tasks.loop(hours=1)
     async def role_reporter(self):
-        await self.bot.wait_until_ready()
         settings = await settings_utils.load_settings()
         # Поддержка нескольких серверов (guilds)
         for guild_id, guild_settings in settings.get("guilds", {}).items():
@@ -28,10 +26,16 @@ class RoleReportTask(commands.Cog):
                     role_groups = []
             if not channel_id or not role_groups:
                 continue
-            guild = self.bot.get_guild(int(guild_id))
+            try:
+                guild_int = int(guild_id)
+                channel_int = int(channel_id)
+            except (TypeError, ValueError):
+                continue
+
+            guild = self.bot.get_guild(guild_int)
             if not guild:
                 continue
-            channel = guild.get_channel(channel_id)
+            channel = guild.get_channel(channel_int)
             if not channel:
                 continue
             for group in role_groups:
@@ -40,7 +44,10 @@ class RoleReportTask(commands.Cog):
                 message_id = group.get("message_id", 0)
                 lines = [f"# {group_name}"]
                 for role_id in role_ids:
-                    role = guild.get_role(role_id)
+                    try:
+                        role = guild.get_role(int(role_id))
+                    except (TypeError, ValueError):
+                        continue
                     if not role:
                         continue
                     count = sum(1 for m in guild.members if role in m.roles)
@@ -59,6 +66,10 @@ class RoleReportTask(commands.Cog):
                     group["message_id"] = msg.id
             # Сохраняем обновлённые message_id
             await settings_utils.set_guild_setting(guild_id, "ROLE_GROUPS", role_groups)
+
+    @role_reporter.before_loop
+    async def before_role_reporter(self):
+        await self.bot.wait_until_ready()
 
 async def setup(bot):
     await bot.add_cog(RoleReportTask(bot))

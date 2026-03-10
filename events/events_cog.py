@@ -1,7 +1,8 @@
 import discord
 import wavelink
 from discord.ext import commands
-from loader import EXTENSIONS, LAVALINK_HOST, LAVALINK_PASSWORD, init_aiohttp_session, logger
+from database import database
+from loader import LAVALINK_HOST, LAVALINK_PASSWORD, init_aiohttp_session, logger
 from utils.settings import load_settings, save_settings, get_guild_setting
 from utils.messages import get_welcome_embed
 from embeds import guild_join, queue_empty_embed, track_embed
@@ -11,6 +12,8 @@ class Events(commands.Cog):
     """Cog для всех Discord событий: on_ready, on_guild_join, on_member_join, события Wavelink и др."""
     def __init__(self, bot):
         self.bot = bot
+        self._wavelink_connected = False
+        self._commands_synced = False
         logger.info("Events Cog инициализирован")
 
     @commands.Cog.listener()
@@ -20,24 +23,29 @@ class Events(commands.Cog):
         discord.utils.setup_logging(level=logger.level)
         await init_aiohttp_session()
         logger.info("Logged in: %s | %s", self.bot.user, self.bot.user.id)
-        selected_node = {"host": LAVALINK_HOST, "password": LAVALINK_PASSWORD}
-        node = wavelink.Node(
-            uri=selected_node["host"],
-            password=selected_node["password"],
-        )
-        await wavelink.Pool.connect(nodes=[node], client=self.bot)
-        logger.info("Lavalink node connected!")
-        await self.bot.tree.sync()
-        logger.info("Slash commands synced!")
+        if not self._wavelink_connected:
+            if not LAVALINK_HOST or not LAVALINK_PASSWORD:
+                logger.error("LAVALINK_HOST or LAVALINK_PASSWORD is missing. Music features may not work.")
+            else:
+                node = wavelink.Node(uri=LAVALINK_HOST, password=LAVALINK_PASSWORD)
+                await wavelink.Pool.connect(nodes=[node], client=self.bot)
+                self._wavelink_connected = True
+                logger.info("Lavalink node connected!")
+        if not self._commands_synced:
+            await self.bot.tree.sync()
+            self._commands_synced = True
+            logger.info("Slash commands synced!")
         logger.info(f"Bot is ready. Logged in as {self.bot.user}")
         # Запуск задач для поздравлений и снятия роли именинника
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         """Обработка события присоединения к новому серверу."""
-        from database import database
-        database.register_guild(str(guild.id))
-        if database.is_admin(str(guild.id), str(guild.owner_id)) is False:
-            database.add_admin(str(guild.id), str(guild.owner_id))
+        guild_id = str(guild.id)
+        owner_id = str(guild.owner_id)
+        await database.run_in_thread(database.register_guild, guild_id)
+        is_owner_admin = await database.run_in_thread(database.is_admin, guild_id, owner_id)
+        if is_owner_admin is False:
+            await database.run_in_thread(database.add_admin, guild_id, owner_id)
             logger.info(f"Add new admin in guild: {guild.name} (ID:{guild.id}): {guild.owner} (ID:{guild.owner_id})")
         else:
             logger.info(f"Owner guild: {guild.name} (ID:{guild.id}) is already admin")
@@ -150,6 +158,7 @@ class Events(commands.Cog):
                     except Exception as e:
                         logger.warning(f"Could not delete last track message: {e}")
                 await player.channel.send(embed=await queue_empty_embed.get_embed())
+                await player.disconnect()
                 logger.info("Player disconnected after queue end.")
             except Exception as e:
                 logger.error(f"Error during empty queue handling: {e}")

@@ -1,4 +1,5 @@
 # database/birthday.py
+import asyncio
 import json
 import os
 import sqlite3
@@ -9,6 +10,10 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "birthdays.db")
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
+
+
+async def run_in_thread(func, *args, **kwargs):
+    return await asyncio.to_thread(func, *args, **kwargs)
 
 
 def init_db():
@@ -188,6 +193,13 @@ def is_admin(guild_id: str, user_id: str) -> bool:
             (guild_id, user_id),
         )
         return c.fetchone() is not None
+
+
+def get_admin_ids(guild_id: str):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute("SELECT user_id FROM admins WHERE guild_id = ?", (guild_id,))
+        return [row[0] for row in c.fetchall()]
 
 
 def get_all_birthdays_on_date(guild_id: str, date_str: str):
