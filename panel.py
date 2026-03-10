@@ -10,9 +10,15 @@ BOT_PROCESS = None
 BOT_PATH = "bot.py"
 SETTINGS_PATH = "settings.json"
 LOG_PATH = os.path.join("logs", "bot.log")
+PANEL_BOT_CONTROL_ENABLED = os.getenv("PANEL_BOT_CONTROL_ENABLED", "1") == "1"
 
 def start_bot(page):
     global BOT_PROCESS
+    if not PANEL_BOT_CONTROL_ENABLED:
+        page.snack_bar = ft.SnackBar(ft.Text("Управление процессом бота отключено в этой среде"))
+        page.snack_bar.open = True
+        page.update()
+        return
     if BOT_PROCESS is None or BOT_PROCESS.poll() is not None:
         BOT_PROCESS = subprocess.Popen([sys.executable, BOT_PATH])
         page.snack_bar = ft.SnackBar(ft.Text("Бот запущен!"))
@@ -21,6 +27,11 @@ def start_bot(page):
 
 def stop_bot(page):
     global BOT_PROCESS
+    if not PANEL_BOT_CONTROL_ENABLED:
+        page.snack_bar = ft.SnackBar(ft.Text("Управление процессом бота отключено в этой среде"))
+        page.snack_bar.open = True
+        page.update()
+        return
     if BOT_PROCESS and BOT_PROCESS.poll() is None:
         BOT_PROCESS.terminate()
         BOT_PROCESS = None
