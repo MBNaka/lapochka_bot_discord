@@ -16,6 +16,23 @@ lavalink:
 
 plugins:
   youtube:
+    ANDROID:
+      playback: false
+    TVHTML5EMBEDDED:
+      playlistLoading: true
+      searching: true
+      videoLoading: true
+    WEB:
+      playback: true
+    clients:
+    - MUSIC
+    - WEB
+    - ANDROID
+    - ANDROID_TESTSUITE
+    - TVHTML5EMBEDDED
+    - ANDROID_LITE
+    - MEDIA_CONNECT
+    - IOS
     remoteCipher:
       url: "https://cipher.kikkia.dev/"
     enabled: true
@@ -26,37 +43,6 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
-    clients:
-      - "ANDROID_MUSIC"
-      - "WEB"
-      - "MUSIC"
-      - "WEBEMBEDDED"
-      - "TVHTML5EMBEDDED"
-    ANDROID_MUSIC:
-      playlistLoading: false
-      videoLoading: true
-      searching: true
-      playback: true
-    MUSIC:
-      playlistLoading: false
-      videoLoading: true
-      searching: true
-      playback: false
-    WEB:
-      playlistLoading: false
-      videoLoading: true
-      searching: true
-      playback: true
-    WEBEMBEDDED:
-      playlistLoading: false
-      videoLoading: false
-      searching: false
-      playback: true
-    TVHTML5EMBEDDED:
-      playlistLoading: false
-      videoLoading: false
-      searching: false
-      playback: true
   lavasrc:
     sources:
       youtube: true
