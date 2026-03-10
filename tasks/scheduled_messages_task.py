@@ -42,13 +42,23 @@ class ScheduledMessagesTask(commands.Cog):
                             logger.error(f"[ScheduledMessagesTask] Invalid datetime: {dt_str}")
                             continue
                         if now >= dt:
+                            sent_successfully = False
                             channel = self.bot.get_channel(int(channel_id))
                             if channel:
                                 try:
                                     await channel.send(text)
+                                    sent_successfully = True
                                     logger.info(f"[ScheduledMessagesTask] Sent scheduled message {msg_id} to {channel_id} in guild {guild_id}")
                                 except Exception as e:
                                     logger.error(f"[ScheduledMessagesTask] Failed to send message: {e}")
+                            else:
+                                logger.error(
+                                    f"[ScheduledMessagesTask] Channel {channel_id} not found for scheduled message {msg_id} in guild {guild_id}"
+                                )
+
+                            if not sent_successfully:
+                                continue
+
                             # Обработка повторения
                             if repeat == "never":
                                 await database.run_in_thread(

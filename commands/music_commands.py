@@ -12,6 +12,28 @@ class MusicCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def _ensure_same_voice_channel(
+        self, interaction: discord.Interaction, player: wavelink.Player
+    ) -> bool:
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            await interaction.response.send_message(MESSAGES["not_in_voice"], ephemeral=True)
+            return False
+
+        if player and player.channel and interaction.user.voice.channel.id != player.channel.id:
+            await interaction.response.send_message(MESSAGES["different_voice_channel"], ephemeral=True)
+            return False
+
+        return True
+
+    @staticmethod
+    def _format_queue_text(queue, limit: int = 20) -> str:
+        queue_items = list(queue)
+        visible = queue_items[:limit]
+        queue_text = "\n".join(f"{i + 1}. {track.title}" for i, track in enumerate(visible))
+        if len(queue_items) > limit:
+            queue_text += f"\n... и ещё {len(queue_items) - limit} трек(ов)"
+        return queue_text
+
     @app_commands.command(name="play", description="Включить музыку")
     @app_commands.rename(query="ссылка_или_название_трек")
     @app_commands.describe(query="Введите URL или название трека")
@@ -94,13 +116,11 @@ class MusicCommands(commands.Cog):
     @app_commands.command(name="skip", description="Пропустить трек")
     async def skip(self, interaction: discord.Interaction):
         logger.debug(f"{interaction.user.name} use /skip")
-        if not interaction.user.voice:
-            logger.info(f"{interaction.user.name} is not in a voice channel")
-            return await interaction.response.send_message(
-                MESSAGES["not_in_voice"], ephemeral=True
-            )
-
         player: wavelink.Player = interaction.guild.voice_client
+        if not await self._ensure_same_voice_channel(interaction, player):
+            logger.info(f"{interaction.user.name} is not allowed to control player")
+            return
+
         if not player or not player.playing:
             logger.info(f"{interaction.user.name}. Player is not playing")
             return await interaction.response.send_message(
@@ -124,6 +144,10 @@ class MusicCommands(commands.Cog):
     async def stop(self, interaction: discord.Interaction):
         logger.debug(f"{interaction.user.name} use /stop")
         player: wavelink.Player = interaction.guild.voice_client
+        if player and not await self._ensure_same_voice_channel(interaction, player):
+            logger.info(f"{interaction.user.name} is not allowed to control player")
+            return
+
         if not player:
             logger.info(f"{interaction.user.name}. Player is not playing")
             return await interaction.response.send_message(
@@ -148,6 +172,10 @@ class MusicCommands(commands.Cog):
     async def pause(self, interaction: discord.Interaction):
         logger.debug(f"{interaction.user.name} use /pause")
         player: wavelink.Player = interaction.guild.voice_client
+        if player and not await self._ensure_same_voice_channel(interaction, player):
+            logger.info(f"{interaction.user.name} is not allowed to control player")
+            return
+
         if not player:
             logger.info(f"{interaction.user.name}. Player is not playing")
             return await interaction.response.send_message(
@@ -161,6 +189,10 @@ class MusicCommands(commands.Cog):
     async def resume(self, interaction: discord.Interaction):
         logger.debug(f"{interaction.user.name} use /resume")
         player: wavelink.Player = interaction.guild.voice_client
+        if player and not await self._ensure_same_voice_channel(interaction, player):
+            logger.info(f"{interaction.user.name} is not allowed to control player")
+            return
+
         if not player:
             logger.info(f"{interaction.user.name}. Player is not playing")
             return await interaction.response.send_message(
@@ -183,6 +215,10 @@ class MusicCommands(commands.Cog):
                 MESSAGES["volume_invalid"], ephemeral=True
             )
         player: wavelink.Player = interaction.guild.voice_client
+        if player and not await self._ensure_same_voice_channel(interaction, player):
+            logger.info(f"{interaction.user.name} is not allowed to control player")
+            return
+
         if not player:
             logger.info(f"{interaction.user.name}. Player is not playing")
             return await interaction.response.send_message(
@@ -204,9 +240,7 @@ class MusicCommands(commands.Cog):
             return await interaction.followup.send(
                 MESSAGES["queue_empty"], ephemeral=True
             )
-        queue_text = "\n".join(
-            f"{i + 1}. {track.title}" for i, track in enumerate(player.queue)
-        )
+        queue_text = self._format_queue_text(player.queue)
         await interaction.followup.send(
             f"🔹 **Очередь:**\n{queue_text}", ephemeral=True
         )

@@ -57,6 +57,7 @@ class BirthdayTask(commands.Cog):
 
     async def _check_birthdays(self):
         today = datetime.now().strftime("%d.%m")
+        today_key = datetime.now().strftime("%Y-%m-%d")
         logger.info(f"[BirthdayTask] Checking birthdays for {today}")
         for guild in self.bot.guilds:
             guild_id = str(guild.id)
@@ -83,6 +84,12 @@ class BirthdayTask(commands.Cog):
                 )
                 continue
             for user_id in user_ids:
+                delivered = await database.run_in_thread(
+                    database.has_birthday_delivery, guild_id, user_id, today_key
+                )
+                if delivered:
+                    continue
+
                 greeting = await database.run_in_thread(
                     database.get_greeting, guild_id, user_id
                 )
@@ -109,6 +116,9 @@ class BirthdayTask(commands.Cog):
                     )
                 try:
                     await channel.send(embed=embed)
+                    await database.run_in_thread(
+                        database.mark_birthday_delivered, guild_id, user_id, today_key
+                    )
                 except Exception as e:
                     logger.error(
                         f"[BirthdayTask] Failed to send birthday message for user {user_id} in guild {guild_id}: {e}"

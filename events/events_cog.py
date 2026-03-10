@@ -95,7 +95,11 @@ class Events(commands.Cog):
         if not channel_id:
             logger.warning(f"Welcome channel not set for guild {member.guild.name}")
             return
-        channel = member.guild.get_channel(channel_id)
+        try:
+            channel = member.guild.get_channel(int(channel_id))
+        except (TypeError, ValueError):
+            logger.error(f"Invalid welcome channel id {channel_id} in guild {member.guild.name}")
+            return
         if not channel:
             logger.error(f"Welcome channel {channel_id} not found in guild {member.guild.name}")
             return
@@ -139,13 +143,12 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
         """Обработка события окончания трека Wavelink."""
-        logger.info(
-            f"Track ended: {payload.track.title}. Guild: {payload.player.guild.name}"
-        )
         player = payload.player
         if not player:
             logger.error("Player is None.")
             return
+        track_title = payload.track.title if payload.track else "unknown"
+        logger.info(f"Track ended: {track_title}. Guild: {player.guild.name}")
         if player.queue.is_empty:
             logger.info(f"Queue is empty for {player.guild.name}. Disconnecting...")
             try:

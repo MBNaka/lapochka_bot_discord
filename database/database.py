@@ -9,7 +9,9 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "birthdays.db")
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 async def run_in_thread(func, *args, **kwargs):
@@ -82,6 +84,15 @@ def init_db():
             FOREIGN KEY(guild_id, user_id) REFERENCES users(guild_id, user_id) ON DELETE CASCADE
         )"""
         )
+        # Лог отправленных поздравлений, чтобы не дублировать сообщения при рестартах
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS birthday_delivery_log (
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            delivery_date TEXT NOT NULL,
+            PRIMARY KEY(guild_id, user_id, delivery_date)
+        )"""
+        )
         # Таблица запланированных сообщений
         c.execute(
             '''CREATE TABLE IF NOT EXISTS scheduled_messages (
@@ -124,7 +135,11 @@ def set_birthday(guild_id: str, user_id: str, birthday: str):
             (guild_id, user_id, birthday),
         )
         embed_json = json.dumps(
-            {"title": "С Днём рождения!", "description": "WIP", "image_url": None}
+            {
+                "title": "С Днём рождения!",
+                "description": "Пусть этот день будет ярким и радостным!",
+                "image_url": None,
+            }
         )
         c.execute(
             "INSERT OR REPLACE INTO birthday_greetings (guild_id, user_id, embed_json) VALUES (?, ?, ?)",
@@ -241,6 +256,26 @@ def remove_birthday_role(guild_id: str, user_id: str):
         c.execute(
             "DELETE FROM birthday_role_assignments WHERE guild_id = ? AND user_id = ?",
             (guild_id, user_id),
+        )
+        conn.commit()
+
+
+def has_birthday_delivery(guild_id: str, user_id: str, delivery_date: str) -> bool:
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            "SELECT 1 FROM birthday_delivery_log WHERE guild_id = ? AND user_id = ? AND delivery_date = ?",
+            (guild_id, user_id, delivery_date),
+        )
+        return c.fetchone() is not None
+
+
+def mark_birthday_delivered(guild_id: str, user_id: str, delivery_date: str):
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT OR IGNORE INTO birthday_delivery_log (guild_id, user_id, delivery_date) VALUES (?, ?, ?)",
+            (guild_id, user_id, delivery_date),
         )
         conn.commit()
 
