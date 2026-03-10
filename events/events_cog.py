@@ -1,8 +1,11 @@
 import discord
+import time
 import wavelink
 from discord.ext import commands
-from loader import EXTENSIONS, LAVALINK_HOST, LAVALINK_PASSWORD, init_aiohttp_session, logger
+from database import database
+from loader import LAVALINK_HOST, LAVALINK_PASSWORD, init_aiohttp_session, logger
 from utils.settings import load_settings, save_settings, get_guild_setting
+from utils.structured_log import log_event
 from utils.messages import get_welcome_embed
 from embeds import guild_join, queue_empty_embed, track_embed
 import embeds.disconnect_embed
@@ -11,7 +14,27 @@ class Events(commands.Cog):
     """Cog для всех Discord событий: on_ready, on_guild_join, on_member_join, события Wavelink и др."""
     def __init__(self, bot):
         self.bot = bot
+        self._wavelink_connected = False
+        self._commands_synced = False
         logger.info("Events Cog инициализирован")
+
+    @staticmethod
+    def _track_key(track) -> str:
+        if not track:
+            return "unknown"
+        identifier = getattr(track, "identifier", None) or getattr(track, "title", "unknown")
+        return str(identifier)
+
+    @staticmethod
+    def _is_duplicate_event(player: wavelink.Player, event_name: str, key: str, window_seconds: float = 5.0) -> bool:
+        attr = f"_last_{event_name}_event"
+        now = time.monotonic()
+        last = getattr(player, attr, None)
+        setattr(player, attr, (key, now))
+        if not last:
+            return False
+        last_key, last_ts = last
+        return last_key == key and (now - last_ts) <= window_seconds
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -20,24 +43,29 @@ class Events(commands.Cog):
         discord.utils.setup_logging(level=logger.level)
         await init_aiohttp_session()
         logger.info("Logged in: %s | %s", self.bot.user, self.bot.user.id)
-        selected_node = {"host": LAVALINK_HOST, "password": LAVALINK_PASSWORD}
-        node = wavelink.Node(
-            uri=selected_node["host"],
-            password=selected_node["password"],
-        )
-        await wavelink.Pool.connect(nodes=[node], client=self.bot)
-        logger.info("Lavalink node connected!")
-        await self.bot.tree.sync()
-        logger.info("Slash commands synced!")
+        if not self._wavelink_connected:
+            if not LAVALINK_HOST or not LAVALINK_PASSWORD:
+                logger.error("LAVALINK_HOST or LAVALINK_PASSWORD is missing. Music features may not work.")
+            else:
+                node = wavelink.Node(uri=LAVALINK_HOST, password=LAVALINK_PASSWORD)
+                await wavelink.Pool.connect(nodes=[node], client=self.bot)
+                self._wavelink_connected = True
+                logger.info("Lavalink node connected!")
+        if not self._commands_synced:
+            await self.bot.tree.sync()
+            self._commands_synced = True
+            logger.info("Slash commands synced!")
         logger.info(f"Bot is ready. Logged in as {self.bot.user}")
         # Запуск задач для поздравлений и снятия роли именинника
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         """Обработка события присоединения к новому серверу."""
-        from database import database
-        database.register_guild(str(guild.id))
-        if database.is_admin(str(guild.id), str(guild.owner_id)) is False:
-            database.add_admin(str(guild.id), str(guild.owner_id))
+        guild_id = str(guild.id)
+        owner_id = str(guild.owner_id)
+        await database.run_in_thread(database.register_guild, guild_id)
+        is_owner_admin = await database.run_in_thread(database.is_admin, guild_id, owner_id)
+        if is_owner_admin is False:
+            await database.run_in_thread(database.add_admin, guild_id, owner_id)
             logger.info(f"Add new admin in guild: {guild.name} (ID:{guild.id}): {guild.owner} (ID:{guild.owner_id})")
         else:
             logger.info(f"Owner guild: {guild.name} (ID:{guild.id}) is already admin")
@@ -87,7 +115,11 @@ class Events(commands.Cog):
         if not channel_id:
             logger.warning(f"Welcome channel not set for guild {member.guild.name}")
             return
-        channel = member.guild.get_channel(channel_id)
+        try:
+            channel = member.guild.get_channel(int(channel_id))
+        except (TypeError, ValueError):
+            logger.error(f"Invalid welcome channel id {channel_id} in guild {member.guild.name}")
+            return
         if not channel:
             logger.error(f"Welcome channel {channel_id} not found in guild {member.guild.name}")
             return
@@ -131,13 +163,29 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
         """Обработка события окончания трека Wavelink."""
-        logger.info(
-            f"Track ended: {payload.track.title}. Guild: {payload.player.guild.name}"
-        )
         player = payload.player
         if not player:
             logger.error("Player is None.")
             return
+        track_key = self._track_key(payload.track)
+        if self._is_duplicate_event(player, "track_end", track_key):
+            log_event(
+                logger,
+                "warning",
+                "Duplicate track_end ignored",
+                guild_id=player.guild.id,
+                track=track_key,
+            )
+            return
+
+        track_title = payload.track.title if payload.track else "unknown"
+        log_event(
+            logger,
+            "info",
+            "Track ended",
+            guild_id=player.guild.id,
+            track=track_title,
+        )
         if player.queue.is_empty:
             logger.info(f"Queue is empty for {player.guild.name}. Disconnecting...")
             try:
@@ -150,6 +198,7 @@ class Events(commands.Cog):
                     except Exception as e:
                         logger.warning(f"Could not delete last track message: {e}")
                 await player.channel.send(embed=await queue_empty_embed.get_embed())
+                await player.disconnect()
                 logger.info("Player disconnected after queue end.")
             except Exception as e:
                 logger.error(f"Error during empty queue handling: {e}")
@@ -157,13 +206,30 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         """Обработка события начала трека Wavelink."""
-        logger.info("on_wavelink_track_start")
         player = payload.player
         if not player:
             logger.error("Player is None")
             return
         original = payload.original
         track = payload.track
+        track_key = self._track_key(track)
+        if self._is_duplicate_event(player, "track_start", track_key):
+            log_event(
+                logger,
+                "warning",
+                "Duplicate track_start ignored",
+                guild_id=player.guild.id,
+                track=track_key,
+            )
+            return
+
+        log_event(
+            logger,
+            "info",
+            "Track started",
+            guild_id=player.guild.id,
+            track=track.title if track else "unknown",
+        )
         try:
             embed, file = await track_embed.get_embed(track, original)
             last_message_id = getattr(player, "last_track_message", None)

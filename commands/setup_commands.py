@@ -4,6 +4,8 @@ from discord.ext import commands
 from discord.ui import View, Modal, TextInput
 
 from utils.settings import load_settings, save_settings
+from utils.messages import MESSAGES
+from utils.timezones import is_valid_timezone
 from embeds import about_embed, settings_embed
 
 class WelcomeMessageModal(Modal, title="Изменить приветственное сообщение (устар.)"):
@@ -20,38 +22,36 @@ class WelcomeMessageModal(Modal, title="Изменить приветствен�
         await interaction.response.send_message(f"Приветственное сообщение обновлено!", ephemeral=True)
 
 class WelcomeEmbedModal(Modal, title="Изменить embed приветствия"):
-    def __init__(self, guild_id: int):
+    def __init__(
+        self,
+        guild_id: int,
+        text_default: str = "",
+        thumbnail_default: str = "",
+        image_default: str = "",
+    ):
         super().__init__()
         self.guild_id = guild_id
-        # Получаем старые значения из настроек (синхронно, но вызываем асинхронно в on_ready)
         self.text = TextInput(
             label="Текст embed'а",
             style=discord.TextStyle.paragraph,
             required=True,
-            default=""
+            default=text_default,
         )
         self.thumbnail_url = TextInput(
             label="Ссылка на миниатюру (THUMBNAIL_URL)",
             style=discord.TextStyle.short,
             required=False,
-            default=""
+            default=thumbnail_default,
         )
         self.image_url = TextInput(
             label="Ссылка на изображение (IMAGE_URL)",
             style=discord.TextStyle.short,
             required=False,
-            default=""
+            default=image_default,
         )
         self.add_item(self.text)
         self.add_item(self.thumbnail_url)
         self.add_item(self.image_url)
-
-    async def on_ready(self, interaction: Interaction):
-        settings = await load_settings()
-        embed_settings = settings["guilds"].get(str(self.guild_id), {}).get("WELCOME_EMBED", {})
-        self.text.default = embed_settings.get("TEXT", "")
-        self.thumbnail_url.default = embed_settings.get("THUMBNAIL_URL", "")
-        self.image_url.default = embed_settings.get("IMAGE_URL", "")
 
     async def on_submit(self, interaction: Interaction):
         settings = await load_settings()
@@ -145,7 +145,16 @@ class SetupView(View):
 
     @discord.ui.button(label="Изменить embed приветствия", custom_id="setup_welcome_embed", style=discord.ButtonStyle.secondary)
     async def setup_welcome_embed(self, interaction: Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(WelcomeEmbedModal(self.guild.id))
+        settings = await load_settings()
+        embed_settings = settings.get("guilds", {}).get(str(self.guild.id), {}).get("WELCOME_EMBED", {})
+        await interaction.response.send_modal(
+            WelcomeEmbedModal(
+                self.guild.id,
+                text_default=embed_settings.get("TEXT", ""),
+                thumbnail_default=embed_settings.get("THUMBNAIL_URL", ""),
+                image_default=embed_settings.get("IMAGE_URL", ""),
+            )
+        )
 
     @discord.ui.button(label="Изменить текст приветствия", custom_id="setup_welcome_message", style=discord.ButtonStyle.secondary)
     async def change_welcome_message(self, interaction: Interaction, button: discord.ui.Button):
@@ -164,10 +173,72 @@ class Setup(commands.Cog):
     async def setup(self, interaction: Interaction):
         await interaction.response.send_message(embed=await settings_embed.get_embed(), view=SetupView(interaction.guild), ephemeral=True)
 
+    @app_commands.command(name="setup_status", description="Показать статус конфигурации бота")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setup_status(self, interaction: Interaction):
+        guild_id = str(interaction.guild.id)
+        settings = await load_settings()
+        guild_settings = settings.get("guilds", {}).get(guild_id, {})
+
+        def mark(value):
+            return "OK" if value else "MISSING"
+
+        lines = [
+            f"WELCOME_ENABLED: {mark(guild_settings.get('WELCOME_ENABLED') is not None)}",
+            f"WELCOME_CHANNEL_ID: {mark(guild_settings.get('WELCOME_CHANNEL_ID'))}",
+            f"RULES_CHANNEL_ID: {mark(guild_settings.get('RULES_CHANNEL_ID'))}",
+            f"BIRTHDAY_CHANNEL_ID: {mark(guild_settings.get('BIRTHDAY_CHANNEL_ID'))}",
+            f"BIRTHDAY_ROLE_ID: {mark(guild_settings.get('BIRTHDAY_ROLE_ID'))}",
+            f"ROLE_REPORT_CHANNEL_ID: {mark(guild_settings.get('ROLE_REPORT_CHANNEL_ID'))}",
+            f"WELCOME_EMBED: {mark(guild_settings.get('WELCOME_EMBED'))}",
+            f"TIMEZONE: {guild_settings.get('TIMEZONE', 'UTC')}",
+        ]
+
+        embed = discord.Embed(
+            title="Статус настройки бота",
+            description="\n".join(lines),
+            color=discord.Color.blurple(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="set_timezone", description="Установить часовой пояс сервера")
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.describe(timezone="IANA timezone, например Europe/Moscow")
+    async def set_timezone(self, interaction: Interaction, timezone: str):
+        tz_name = timezone.strip()
+        if not is_valid_timezone(tz_name):
+            await interaction.response.send_message(
+                "❌ Неверный timezone. Пример: `Europe/Moscow`, `UTC`, `America/New_York`.",
+                ephemeral=True,
+            )
+            return
+
+        settings = await load_settings()
+        guild_settings = settings.setdefault("guilds", {}).setdefault(str(interaction.guild.id), {})
+        guild_settings["TIMEZONE"] = tz_name
+        await save_settings(settings)
+        await interaction.response.send_message(
+            f"✅ Часовой пояс сервера установлен: `{tz_name}`", ephemeral=True
+        )
+
     @setup.error
     async def setup_error(self, interaction: Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
-            await interaction.response.send_message("❌ Только администратор сервера может использовать эту команду.", ephemeral=True)
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
+        else:
+            await interaction.response.send_message(f"Произошла ошибка: {error}", ephemeral=True)
+
+    @setup_status.error
+    async def setup_status_error(self, interaction: Interaction, error):
+        if isinstance(error, app_commands.errors.MissingPermissions):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
+        else:
+            await interaction.response.send_message(f"Произошла ошибка: {error}", ephemeral=True)
+
+    @set_timezone.error
+    async def set_timezone_error(self, interaction: Interaction, error):
+        if isinstance(error, app_commands.errors.MissingPermissions):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
         else:
             await interaction.response.send_message(f"Произошла ошибка: {error}", ephemeral=True)
 

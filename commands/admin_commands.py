@@ -9,10 +9,10 @@ from loader import logger
 from utils.messages import MESSAGES
 from utils.settings import get_guild_setting, set_guild_setting
 
-def check_admin(interaction: discord.Interaction) -> bool:
+async def check_admin(interaction: discord.Interaction) -> bool:
     guild_id = str(interaction.guild.id)
     user_id = str(interaction.user.id)
-    if not is_admin(guild_id, user_id):
+    if not await database.run_in_thread(is_admin, guild_id, user_id):
         logger.warning(f"User {interaction.user} tried to use admin command without permissions.")
         return False
     return True
@@ -26,16 +26,16 @@ class AdminCommands(commands.Cog):
     )
     @app_commands.describe(user="Пользователь, которого нужно добавить в админы")
     async def add_admin(self, interaction: discord.Interaction, user: discord.Member):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         guild_id = str(interaction.guild.id)
-        if database.is_admin(guild_id, str(user.id)):
+        if await database.run_in_thread(database.is_admin, guild_id, str(user.id)):
             await interaction.response.send_message(
                 MESSAGES["already_admin"], ephemeral=True
             )
             return
-        database.add_admin(guild_id, str(user.id))
+        await database.run_in_thread(database.add_admin, guild_id, str(user.id))
         logger.info(
             f"User {interaction.user} added {user} as admin in guild {guild_id}."
         )
@@ -50,11 +50,11 @@ class AdminCommands(commands.Cog):
     async def remove_admin(
         self, interaction: discord.Interaction, user: discord.Member
     ):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         guild_id = str(interaction.guild.id)
-        database.remove_admin(guild_id, str(user.id))
+        await database.run_in_thread(database.remove_admin, guild_id, str(user.id))
         logger.info(
             f"User {interaction.user} removed {user} from admin list in guild {guild_id}."
         )
@@ -69,11 +69,11 @@ class AdminCommands(commands.Cog):
     async def edit_greeting(
         self, interaction: discord.Interaction, user: discord.Member
     ):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         guild_id = str(interaction.guild.id)
-        greeting = database.get_greeting(guild_id, str(user.id))
+        greeting = await database.run_in_thread(database.get_greeting, guild_id, str(user.id))
         if not greeting:
             logger.error(
                 f"User {interaction.user} tried to edit greeting for {user}, but no greeting found in guild {guild_id}."
@@ -116,7 +116,9 @@ class AdminCommands(commands.Cog):
                     "image_url": str(self.image_url) if self.image_url else None,
                     "footer": str(self.footer) if self.footer else None,
                 }
-                database.set_greeting(guild_id, str(user.id), updated_greeting)
+                await database.run_in_thread(
+                    database.set_greeting, guild_id, str(user.id), updated_greeting
+                )
                 logger.info(
                     f"User {interaction.user} updated greeting for {user} in guild {guild_id}."
                 )
@@ -130,23 +132,20 @@ class AdminCommands(commands.Cog):
         name="list_admins", description="Просмотреть список администраторов"
     )
     async def list_admins(self, interaction: discord.Interaction):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         guild_id = str(interaction.guild.id)
-        with database.get_connection() as conn:
-            c = conn.cursor()
-            c.execute("SELECT user_id FROM admins WHERE guild_id = ?", (guild_id,))
-            rows = c.fetchall()
+        admin_ids = await database.run_in_thread(database.get_admin_ids, guild_id)
 
-        if not rows:
+        if not admin_ids:
             logger.info(f"Admin list is empty for guild {guild_id}.")
             await interaction.response.send_message(
                 MESSAGES["admin_list_empty"], ephemeral=True
             )
             return
 
-        admin_mentions = [f"<@{row[0]}>" for row in rows]
+        admin_mentions = [f"<@{admin_id}>" for admin_id in admin_ids]
         admin_list = "\n".join(admin_mentions)
         logger.debug(
             f"User {interaction.user} requested admin list: {admin_list} in guild {guild_id}"
@@ -173,8 +172,8 @@ class AdminCommands(commands.Cog):
     async def welcome_settings(
         self, interaction: discord.Interaction, action: str, channel: discord.TextChannel = None
     ):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         async def is_channel_empty(guild_id: int):
             if await get_guild_setting(guild_id, "WELCOME_CHANNEL_ID") is None:
@@ -263,8 +262,8 @@ class AdminCommands(commands.Cog):
         channel="Канал для приветственного сообщения"
     )
     async def send_welcome_embed(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        if not check_admin(interaction):
-            await interaction.response.send_message("❌ У вас нет прав на использование этой команды!", ephemeral=True)
+        if not await check_admin(interaction):
+            await interaction.response.send_message(MESSAGES["no_permission"], ephemeral=True)
             return
         guild_id = str(interaction.guild.id)
         message_id = await get_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID")
@@ -280,14 +279,16 @@ class AdminCommands(commands.Cog):
         view = AdminCommands.WelcomeView(faq_url, roles_url, rules_url)
         sent_message = await channel.send(embed=embed, view=view)
         await set_guild_setting(guild_id, "WELCOME_EMBED_MESSAGE_ID", sent_message.id)
-        await interaction.response.send_message(MESSAGES["welcome_sent"].format(channel.mention), ephemeral=True)
+        await interaction.response.send_message(
+            MESSAGES["welcome_sent"].format(channel=channel.mention), ephemeral=True
+        )
 
     @app_commands.command(name="set_panel_password", description="Установить пароль для панели управления (только для владельца сервера)")
     @app_commands.describe(password="Новый пароль для панели")
     async def set_panel_password(self, interaction: discord.Interaction, password: str):
         # Проверка: только владелец сервера
         if interaction.user.id != interaction.guild.owner_id:
-            await interaction.response.send_message("❌ Только владелец сервера может использовать эту команду.", ephemeral=True)
+            await interaction.response.send_message(MESSAGES["owner_only"], ephemeral=True)
             return
         from utils.settings import set_guild_setting
         await set_guild_setting(interaction.guild.id, "PANEL_PASSWORD", password)

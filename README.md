@@ -30,6 +30,79 @@
    python bot.py
    ```
 
+## Docker (bot + Lavalink + UI panel)
+
+### 1. Подготовка
+1. Скопируйте переменные окружения:
+   ```
+   cp .env.docker.example .env
+   ```
+2. Заполните минимум:
+   - `DISCORD_TOKEN`
+   - `LAVALINK_PASSWORD` (должен совпадать с `lavalink/application.yml`)
+
+### 2. Запуск стека
+```
+docker compose up -d --build
+```
+
+Поднимутся сервисы:
+- `bot` — Discord бот
+- `lavalink` — аудио узел
+- `panel` — UI-панель на `http://localhost:8550`
+
+### 3. Остановка
+```
+docker compose down
+```
+
+### 4. Полезно
+- Логи: `docker compose logs -f bot panel lavalink`
+- UI-панель в docker запускается с `PANEL_BOT_CONTROL_ENABLED=0`, так как бот уже работает отдельным сервисом.
+
+## Опционально: zapret на Linux (обход блокировок Discord)
+
+В compose добавлен профиль `zapret` и флаг `ENABLE_ZAPRET`.
+
+### Вариант A: sidecar-профиль
+1. Положите Linux-скрипт запуска в `./zapret/start.sh` (исполняемый).
+2. Запустите:
+   ```
+   docker compose --profile zapret up -d --build
+   ```
+
+### Вариант B: флаг в контейнерах bot/panel
+- Установите в `.env`: `ENABLE_ZAPRET=1`
+- В `Dockerfile` entrypoint попытается выполнить `/opt/zapret/start.sh`.
+
+Важно:
+- zapret-режим рассчитан на Linux-хост.
+- Для sidecar используются `network_mode: host` и `NET_ADMIN`.
+- На Windows/macOS этот режим обычно не нужен/не работает как на Linux.
+
+## Рекомендованные ресурсы VPS
+
+### Минимум (малый сервер, до ~100 активных пользователей)
+- `2 vCPU`
+- `4 GB RAM`
+- `25-30 GB SSD`
+- сеть от `100 Mbps`
+
+### Комфорт (несколько активных голосовых каналов)
+- `4 vCPU`
+- `6-8 GB RAM`
+- `40+ GB SSD`
+- сеть `200 Mbps+`
+
+### Запас под рост
+- `6+ vCPU`
+- `12+ GB RAM`
+- `60+ GB SSD`
+
+Практика:
+- Основное потребление памяти обычно у Lavalink/JVM.
+- Если часто проигрываются плейлисты и много одновременных сессий, сначала увеличивайте RAM.
+
 ## Переменные окружения
 - `DISCORD_TOKEN` — токен вашего Discord-бота
 - `LAVALINK_HOST`, `LAVALINK_PASSWORD` — адрес и пароль вашего Lavalink сервера

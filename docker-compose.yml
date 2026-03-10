@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: lapochka_lavalink
+    restart: unless-stopped
+    ports:
+      - "2333:2333"
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+    environment:
+      _JAVA_OPTIONS: "-Xms256m -Xmx768m"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lapochka_bot
+    restart: unless-stopped
+    depends_on:
+      - lavalink
+    command: ["python", "bot.py"]
+    env_file:
+      - .env
+    environment:
+      LAVALINK_HOST: ${LAVALINK_HOST:-http://lavalink:2333}
+      ENABLE_ZAPRET: ${ENABLE_ZAPRET:-0}
+    volumes:
+      - ./database:/app/database
+      - ./logs:/app/logs
+      - ./settings.json:/app/settings.json
+      - ./zapret:/opt/zapret:ro
+
+  panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lapochka_panel
+    restart: unless-stopped
+    depends_on:
+      - bot
+    command: ["python", "panel.py"]
+    env_file:
+      - .env
+    environment:
+      PANEL_BOT_CONTROL_ENABLED: ${PANEL_BOT_CONTROL_ENABLED:-0}
+      ENABLE_ZAPRET: ${ENABLE_ZAPRET:-0}
+    ports:
+      - "8550:8550"
+    volumes:
+      - ./database:/app/database
+      - ./logs:/app/logs
+      - ./settings.json:/app/settings.json
+      - ./zapret:/opt/zapret:ro
+
+  zapret:
+    image: alpine:3.20
+    container_name: lapochka_zapret
+    profiles: ["zapret"]
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ -x /opt/zapret/start.sh ]; then
+          echo "[zapret] running /opt/zapret/start.sh";
+          /opt/zapret/start.sh;
+        else
+          echo "[zapret] please provide ./zapret/start.sh";
+          tail -f /dev/null;
+        fi
+    volumes:
+      - ./zapret:/opt/zapret:ro

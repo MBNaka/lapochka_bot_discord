@@ -1,8 +1,11 @@
 # .env
 .env
 logs/
+tasks/*.log
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
 lapochka_bot.service
 lavalink.service
 settings.json

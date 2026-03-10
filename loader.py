@@ -4,11 +4,10 @@ from logging.handlers import RotatingFileHandler
 
 import aiohttp
 import discord
-import wavelink
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from utils.settings import get_guild_setting
+os.makedirs("logs", exist_ok=True)
 
 # Общий формат логов
 log_formatter = logging.Formatter(
@@ -79,10 +78,14 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 aiohttp_session = None
 
 EXTENSIONS = [
+    "commands.music_commands",
     "commands.birthday_commands",
     "commands.admin_commands",
     "commands.setup_commands",
+    "events.events_cog",
     "tasks.birthday_task",
+    "tasks.scheduled_messages_task",
+    "tasks.role_report_task",
 ]
 
 

@@ -12,6 +12,28 @@ class PlayerControls(View):
         super().__init__(timeout=None)  # Кнопки остаются активными
         self.bot = bot
 
+    @staticmethod
+    def _format_queue_text(queue, limit: int = 20) -> str:
+        queue_items = list(queue)
+        visible = queue_items[:limit]
+        queue_text = "\n".join(f"{i + 1}. {track.title}" for i, track in enumerate(visible))
+        if len(queue_items) > limit:
+            queue_text += f"\n... и ещё {len(queue_items) - limit} трек(ов)"
+        return queue_text
+
+    async def _ensure_same_voice_channel(
+        self, interaction: discord.Interaction, player: wavelink.Player
+    ) -> bool:
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            await interaction.response.send_message(MESSAGES["not_in_voice"], ephemeral=True)
+            return False
+
+        if player and player.channel and interaction.user.voice.channel.id != player.channel.id:
+            await interaction.response.send_message(MESSAGES["different_voice_channel"], ephemeral=True)
+            return False
+
+        return True
+
     @discord.ui.button(
         emoji=PartialEmoji(name=":play_pause_button:", id=1335960491784278047),
         style=discord.ButtonStyle.secondary,
@@ -21,6 +43,9 @@ class PlayerControls(View):
         """Переключение паузы"""
         player: wavelink.Player = interaction.guild.voice_client
         logger.debug(f"Called button_pause_play. user: {interaction.user.display_name}")
+
+        if not await self._ensure_same_voice_channel(interaction, player):
+            return
 
         if player and player.playing:
             await player.pause(not player.paused)
@@ -41,6 +66,9 @@ class PlayerControls(View):
         """Остановка воспроизведения"""
         logger.debug(f"Called button_stop. user: {interaction.user.display_name}")
         player: wavelink.Player = interaction.guild.voice_client
+        if not await self._ensure_same_voice_channel(interaction, player):
+            return
+
         if not player:
             return await interaction.response.send_message(
                 MESSAGES["player_not_playing"], ephemeral=True
@@ -58,13 +86,9 @@ class PlayerControls(View):
     async def skip(self, interaction: discord.Interaction, button: Button):
         """Пропуск трека"""
         logger.debug(f"Called button_skip. user: {interaction.user.display_name}")
-        if not interaction.user.voice:
-            logger.info(f"{interaction.user.display_name} is not in a voice channel")
-            return await interaction.response.send_message(
-                MESSAGES["not_in_voice"], ephemeral=True
-            )
-
         player: wavelink.Player = interaction.guild.voice_client
+        if not await self._ensure_same_voice_channel(interaction, player):
+            return
 
         if not player or not player.playing:
             logger.info(f"{interaction.user.display_name} player is not playing")
@@ -104,9 +128,7 @@ class PlayerControls(View):
                 MESSAGES["queue_empty"], ephemeral=True
             )
 
-        queue_text = "\n".join(
-            f"{i + 1}. {track.title}" for i, track in enumerate(player.queue)
-        )
+        queue_text = self._format_queue_text(player.queue)
         await interaction.response.send_message(
             f"🔹 **Очередь:**\n{queue_text}", ephemeral=True
         )

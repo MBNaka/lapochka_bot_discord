@@ -1,1 +1,0 @@
-# Перенесено в events/events_cog.py

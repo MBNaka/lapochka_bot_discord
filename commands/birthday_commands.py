@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 import discord
 from discord import Interaction, app_commands
 from discord.ext import commands
@@ -31,7 +32,21 @@ class BirthdayModal(discord.ui.Modal, title="Регистрация дня ро�
                 f"User {interaction.user.name} provided invalid date format: {self.birthday.value}"
             )
             return
-        database.set_birthday(self.guild_id, self.user_id, str(self.birthday.value))
+
+        try:
+            datetime.strptime(str(self.birthday.value), "%d.%m.%Y")
+        except ValueError:
+            await interaction.response.send_message(
+                "❌ Невалидная дата. Проверь день и месяц.", ephemeral=True
+            )
+            logger.info(
+                f"User {interaction.user.name} provided invalid calendar date: {self.birthday.value}"
+            )
+            return
+
+        await database.run_in_thread(
+            database.set_birthday, self.guild_id, self.user_id, str(self.birthday.value)
+        )
         await interaction.response.send_message(
             f"✅ День рождения {self.birthday.value} успешно зарегистрирован!",
             ephemeral=True,
@@ -52,7 +67,7 @@ class Birthday(commands.Cog):
         guild_id = str(interaction.guild.id)
         user_id = str(interaction.user.id)
         username = str(interaction.user.global_name or interaction.user.name)
-        database.register_user(guild_id, user_id, username)
+        await database.run_in_thread(database.register_user, guild_id, user_id, username)
         await interaction.response.send_modal(
             BirthdayModal(guild_id=guild_id, user_id=user_id, username=username)
         )
